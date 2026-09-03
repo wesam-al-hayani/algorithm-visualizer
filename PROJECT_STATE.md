@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 4: balanced trees and persistent structure labs
+Algorithm Lab V2.0 — Phase 5: advanced graph algorithms
 
 ## Completed
 
@@ -46,18 +46,21 @@ Algorithm Lab V2.0 — Phase 4: balanced trees and persistent structure labs
 - [x] Implement textbook B-Tree deletion for leaves and internal nodes
 - [x] Expose predecessor/successor replacement, left/right borrowing, merging, and root shrinking
 - [x] Verify B-Tree insert/delete invariants across minimum degrees 2, 3, 4, and 6
+- [x] Add persistent Insert/Search/Delete/Clear/Random Tree controls for BST, AVL, Red-Black, and B-Tree
+- [x] Keep the current tree, operation count, repair events, and invariant statistics visible after every operation
+- [x] Fix re-entrant Favorites/Recently Viewed navigation uncovered by the packaged UI smoke test
 
 ## Last Completed Task
 
-B-Tree deletion: full borrow/merge/root-shrink visualization and randomized invariant verification
+Phase 4 tree labs: persistent controls for all four trees, verified in the packaged application
 
 ## Current Task
 
-Add persistent on-screen Insert/Search/Delete/Clear/Random controls for BST, AVL, Red-Black, and B-Tree labs.
+Implement Floyd-Warshall, Johnson's Algorithm, graph A*, Tarjan SCC, bridges, articulation points, Euler path/circuit, bipartite check, and Hopcroft-Karp.
 
 ## Next Task
 
-Complete the remaining advanced graph algorithms, including mandatory Dinic maximum flow.
+Implement mandatory Dinic flow, visualize it, and cross-validate it against Edmonds-Karp.
 
 ## Tests
 
@@ -89,6 +92,11 @@ Complete the remaining advanced graph algorithms, including mandatory Dinic maxi
 - B-Tree deletion `./mvnw --batch-mode clean test`: PASS (155 JUnit invocations)
 - B-Tree deletion JaCoCo core line coverage: 98.19% (2,006 / 2,043 lines); required minimum: 80%
 - B-Tree deletion JaCoCo core branch coverage: 87.67% (1,294 / 1,476 branches)
+- Phase 4 final `./mvnw --batch-mode clean test`: PASS (156 JUnit invocations; 62 catalog demos)
+- Phase 4 final JaCoCo core line coverage: 98.21% (2,031 / 2,068 lines); required minimum: 80%
+- Phase 4 final JaCoCo core branch coverage: 87.69% (1,311 / 1,495 branches)
+- Phase 4 `./mvnw --batch-mode -DskipTests package`: PASS
+- Phase 4 packaged UI smoke test: recent-item navigation; BST lab; AVL insert/search/delete/clear/random; Red-Black deletion and repair events; B-Tree deletion and merge events: PASS
 
 ## Known Problems
 
@@ -102,4 +110,4 @@ Complete the remaining advanced graph algorithms, including mandatory Dinic maxi
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: B-Tree deletion checkpoint ready to commit
+- Pending commits: Phase 4 persistent tree-lab checkpoint ready to commit

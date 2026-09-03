@@ -67,6 +67,7 @@
                         <include>dev/wesam/visualizer/ui/InputGenerator*</include>
                         <include>dev/wesam/visualizer/ui/EditHistory*</include>
                         <include>dev/wesam/visualizer/ui/AlgorithmHistory*</include>
+                        <include>dev/wesam/visualizer/ui/TreeLabInput*</include>
                     </includes>
                 </configuration>
                 <executions>

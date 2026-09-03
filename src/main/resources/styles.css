@@ -12,6 +12,7 @@
 .list-cell:selected { -fx-background-color: #243149; -fx-text-fill: #ffffff; -fx-font-weight: 700; }
 .control-card, .visual-card, .info-panel { -fx-background-color: #131d30; -fx-background-radius: 14; -fx-border-color: #26344c; -fx-border-radius: 14; }
 .control-card { -fx-padding: 15; }
+.tree-tools { -fx-alignment: center-left; }
 .visual-card { -fx-padding: 14; }
 .label { -fx-text-fill: #dbe5f4; }
 .field-label { -fx-font-weight: 700; }

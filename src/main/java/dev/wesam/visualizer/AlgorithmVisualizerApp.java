@@ -10,6 +10,7 @@ import dev.wesam.visualizer.ui.GridEditor;
 import dev.wesam.visualizer.ui.InputGenerator;
 import dev.wesam.visualizer.ui.PlaybackController;
 import dev.wesam.visualizer.ui.PseudocodeView;
+import dev.wesam.visualizer.ui.TreeLabInput;
 import dev.wesam.visualizer.ui.VisualizationCanvas;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.Random;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
@@ -80,6 +82,14 @@ public final class AlgorithmVisualizerApp extends Application {
       maze = new Button("Generate Maze");
   private final HBox gridTools =
       new HBox(8, drawWalls, setGridStart, setGridTarget, clearPath, clearGrid, maze);
+  private final TextField treeKey = new TextField();
+  private final Button treeInsert = new Button("Insert"),
+      treeSearch = new Button("Search"),
+      treeDelete = new Button("Delete"),
+      treeClear = new Button("Clear"),
+      treeRandom = new Button("Random Tree");
+  private final HBox treeTools =
+      new HBox(8, treeKey, treeInsert, treeSearch, treeDelete, treeClear, treeRandom);
   private final PlaybackController playback = new PlaybackController();
   private final AlgorithmHistory history = new AlgorithmHistory();
   private final EditHistory editHistory = new EditHistory();
@@ -186,7 +196,13 @@ public final class AlgorithmVisualizerApp extends Application {
     speed.setShowTickLabels(true);
     gridTools.setManaged(false);
     gridTools.setVisible(false);
-    VBox top = new VBox(12, selector, inputBox, gridTools, controls);
+    treeKey.setPromptText("Tree key");
+    treeKey.setAccessibleText("Tree Lab key");
+    treeKey.setPrefWidth(110);
+    treeTools.setManaged(false);
+    treeTools.setVisible(false);
+    treeTools.getStyleClass().add("tree-tools");
+    VBox top = new VBox(12, selector, inputBox, gridTools, treeTools, controls);
     top.getStyleClass().add("control-card");
     VBox visualCard = new VBox(10, operation, visualization, new HBox(12, progress, result));
     visualCard.getStyleClass().add("visual-card");
@@ -257,11 +273,17 @@ public final class AlgorithmVisualizerApp extends Application {
     favorites
         .getSelectionModel()
         .selectedItemProperty()
-        .addListener((observable, oldValue, demo) -> navigateTo(demo));
+        .addListener(
+            (observable, oldValue, demo) -> {
+              if (demo != null) Platform.runLater(() -> navigateTo(demo));
+            });
     recentlyViewed
         .getSelectionModel()
         .selectedItemProperty()
-        .addListener((observable, oldValue, demo) -> navigateTo(demo));
+        .addListener(
+            (observable, oldValue, demo) -> {
+              if (demo != null) Platform.runLater(() -> navigateTo(demo));
+            });
     algorithms
         .valueProperty()
         .addListener(
@@ -272,8 +294,11 @@ public final class AlgorithmVisualizerApp extends Application {
               visualization.show(null);
               updateButtons();
               boolean isGrid = demo != null && demo.name().startsWith("Grid ");
+              boolean isTreeLab = demo != null && TreeLabInput.supports(demo.name());
               gridTools.setManaged(isGrid);
               gridTools.setVisible(isGrid);
+              treeTools.setManaged(isTreeLab);
+              treeTools.setVisible(isTreeLab);
               if (demo != null) {
                 history.recordViewed(demo);
                 updatingFavorite = true;
@@ -295,6 +320,7 @@ public final class AlgorithmVisualizerApp extends Application {
                 progress.setText("Step 0 / 0");
                 statistics.getChildren().clear();
                 if (isGrid) previewGrid();
+                if (isTreeLab) showTreeLab();
               }
             });
     favorite.setOnAction(
@@ -375,6 +401,16 @@ public final class AlgorithmVisualizerApp extends Application {
           makeMaze();
           previewGrid();
         });
+    treeInsert.setOnAction(e -> performTreeOperation(TreeLabInput.Operation.INSERT));
+    treeSearch.setOnAction(e -> performTreeOperation(TreeLabInput.Operation.SEARCH));
+    treeDelete.setOnAction(e -> performTreeOperation(TreeLabInput.Operation.DELETE));
+    treeClear.setOnAction(e -> clearTreeLab());
+    treeRandom.setOnAction(
+        e -> {
+          input.setText(TreeLabInput.randomTree(new Random(), 10));
+          showTreeLab();
+        });
+    treeKey.setOnAction(e -> performTreeOperation(TreeLabInput.Operation.INSERT));
   }
 
   private void startRun() {
@@ -404,13 +440,61 @@ public final class AlgorithmVisualizerApp extends Application {
       progress.setText("Step 0 / " + playback.totalSteps());
       return true;
     } catch (Exception exception) {
-      Alert alert = new Alert(Alert.AlertType.ERROR);
-      alert.setHeaderText("Invalid input");
-      alert.setContentText(
-          exception.getMessage() == null ? exception.toString() : exception.getMessage());
-      alert.showAndWait();
+      showInputError(exception);
       return false;
     }
+  }
+
+  private void performTreeOperation(TreeLabInput.Operation operationType) {
+    try {
+      int key = Integer.parseInt(treeKey.getText().trim());
+      input.setText(TreeLabInput.append(input.getText(), operationType, key));
+      treeKey.clear();
+      showTreeLab();
+    } catch (Exception exception) {
+      showInputError(exception);
+    }
+  }
+
+  private void clearTreeLab() {
+    input.clear();
+    reset();
+    operation.setText(algorithms.getValue().name() + " cleared");
+    result.setText("Empty tree");
+    treeKey.requestFocus();
+  }
+
+  private void showTreeLab() {
+    stopPlayback();
+    playback.reset();
+    if (input.getText().isBlank()) {
+      visualization.show(null);
+      statistics.getChildren().clear();
+      progress.setText("Persistent tree · 0 operations");
+      updateButtons();
+      return;
+    }
+    try {
+      AlgorithmRun run = algorithms.getValue().runner().apply(input.getText());
+      AlgorithmStep current = run.steps().get(run.steps().size() - 1);
+      visualization.show(current);
+      operation.setText(current.message());
+      pseudocode.showCode(current.pseudocode(), current.activeLine());
+      showStatistics(current);
+      progress.setText("Persistent tree · " + run.steps().size() + " operations");
+      result.setText(run.result());
+      updateButtons();
+    } catch (Exception exception) {
+      showInputError(exception);
+    }
+  }
+
+  private void showInputError(Exception exception) {
+    Alert alert = new Alert(Alert.AlertType.ERROR);
+    alert.setHeaderText("Invalid input");
+    alert.setContentText(
+        exception.getMessage() == null ? exception.toString() : exception.getMessage());
+    alert.showAndWait();
   }
 
   private void advance() {
@@ -494,6 +578,7 @@ public final class AlgorithmVisualizerApp extends Application {
     else input.setText(generated);
     reset();
     if (demo.name().startsWith("Grid ")) previewGrid();
+    if (TreeLabInput.supports(demo.name())) showTreeLab();
   }
 
   private void previewGrid() {

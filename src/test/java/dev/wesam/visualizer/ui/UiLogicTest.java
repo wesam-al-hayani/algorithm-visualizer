@@ -120,6 +120,32 @@ class UiLogicTest {
     }
   }
 
+  @Test
+  void treeLabBuildsPersistentOperationHistoryAndDeterministicRandomTrees() {
+    assertTrue(TreeLabInput.supports("AVL Tree"));
+    assertFalse(TreeLabInput.supports("Binary Tree Inorder"));
+    String history = TreeLabInput.append("", TreeLabInput.Operation.INSERT, 20);
+    history = TreeLabInput.append(history, TreeLabInput.Operation.SEARCH, 20);
+    history = TreeLabInput.append(history, TreeLabInput.Operation.DELETE, 20);
+    assertEquals("20,?20,-20", history);
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> TreeLabInput.append("", TreeLabInput.Operation.INSERT, -1));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            TreeLabInput.append(
+                java.util.stream.IntStream.range(0, 100)
+                    .mapToObj(String::valueOf)
+                    .collect(java.util.stream.Collectors.joining(",")),
+                TreeLabInput.Operation.INSERT,
+                101));
+    String first = TreeLabInput.randomTree(new Random(19), 12);
+    assertEquals(first, TreeLabInput.randomTree(new Random(19), 12));
+    assertEquals(12, first.split(",").length);
+    assertThrows(IllegalArgumentException.class, () -> TreeLabInput.randomTree(new Random(), 0));
+  }
+
   private static AlgorithmStep step(String message) {
     return AlgorithmStep.text(message, "details", Map.of());
   }
