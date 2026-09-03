@@ -63,12 +63,20 @@ final class TreeCatalog {
         demo(
             "Trees",
             "Red-Black Tree",
-            "Balanced BST insertion repairs red-parent violations using recoloring and rotations.",
-            "BST insert red node\nwhile parent is red\n  recolor or rotate\ncolor root black",
+            "Balanced BST insertion and deletion repair color violations using recoloring and"
+                + " rotations.",
+            "follow the BST search path\n"
+                + "insert red node or locate deletion target\n"
+                + "for two children, move the successor\n"
+                + "if a black node was removed, mark double-black\n"
+                + "inspect sibling color and its children\n"
+                + "recolor and rotate for sibling case 1/2/3/4\n"
+                + "move double-black upward when required\n"
+                + "color root black and verify invariants",
             "O(log n)",
             "O(log n)",
-            "Keys to insert",
-            "41,38,31,12,19,8,50,60",
+            "Keys; optional ?search or -delete",
+            "41,38,31,12,19,8,50,60,?19,-12,-41",
             TreeCatalog::redBlack));
     demos.add(
         demo(
@@ -154,8 +162,30 @@ final class TreeCatalog {
   static AlgorithmRun redBlack(String input) {
     RedBlackTree tree = new RedBlackTree();
     List<AlgorithmStep> s = new ArrayList<>();
-    for (int key : numbersLimited(input, 100, "red-black tree")) {
-      tree.insert(key);
+    String result = "Red-black tree is empty";
+    String[] operations = input.split(",");
+    if (operations.length > 100)
+      throw new IllegalArgumentException("Red-black visualization is limited to 100 operations");
+    for (String raw : operations) {
+      String token = raw.trim();
+      int key;
+      int activeLine;
+      if (token.startsWith("?")) {
+        key = Integer.parseInt(token.substring(1));
+        result = "Search " + key + ": " + tree.contains(key);
+        activeLine = 0;
+      } else if (token.startsWith("-")) {
+        key = Integer.parseInt(token.substring(1));
+        boolean deleted = tree.delete(key);
+        result = deleted ? "Deleted " + key : "Key " + key + " not found";
+        activeLine =
+            tree.lastEvents().stream().anyMatch(event -> event.contains("Sibling case")) ? 5 : 3;
+      } else {
+        key = Integer.parseInt(token);
+        boolean inserted = tree.insert(key);
+        result = inserted ? "Inserted " + key : "Key " + key + " already present";
+        activeLine = tree.lastEvents().stream().anyMatch(event -> event.contains("rotate")) ? 5 : 1;
+      }
       List<RedBlackTree.NodeView> nodes = tree.levelOrder();
       List<Integer> values = nodes.stream().map(RedBlackTree.NodeView::key).toList();
       Set<Integer> red = new LinkedHashSet<>(), black = new LinkedHashSet<>();
@@ -164,22 +194,31 @@ final class TreeCatalog {
         else black.add(i);
       s.add(
           new AlgorithmStep(
-              "Insert " + key + "; repair colors/rotations",
-              "BST insert red node\nrecolor red uncle or rotate\ncolor root black",
-              1,
+              result,
+              "follow the BST search path\n"
+                  + "insert red node or locate deletion target\n"
+                  + "for two children, move the successor\n"
+                  + "if a black node was removed, mark double-black\n"
+                  + "inspect sibling color and its children\n"
+                  + "recolor and rotate for sibling case 1/2/3/4\n"
+                  + "move double-black upward when required\n"
+                  + "color root black and verify invariants",
+              activeLine,
               TREE,
               values,
               List.of(),
-              Set.of(values.indexOf(key)),
+              values.contains(key) ? Set.of(values.indexOf(key)) : Set.of(),
               red,
               black,
               List.of(),
               Map.of(
                   "Nodes", values.size(), "Rotations", tree.rotations(), "Red nodes", red.size()),
-              "red-black tree\nInvariants: " + tree.invariantsHold()));
+              "Events: "
+                  + (tree.lastEvents().isEmpty() ? "none" : String.join("; ", tree.lastEvents()))
+                  + "\nInvariants: "
+                  + tree.invariantsHold()));
     }
-    return new AlgorithmRun(
-        s, "Inorder: " + tree.inorder() + "; invariants hold: " + tree.invariantsHold());
+    return new AlgorithmRun(s, result + "; inorder " + tree.inorder());
   }
 
   static AlgorithmRun avl(String input) {

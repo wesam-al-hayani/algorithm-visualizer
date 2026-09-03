@@ -107,6 +107,29 @@ class RandomizedStructureTest {
   }
 
   @Test
+  void randomizedRedBlackInsertDeleteMatchesTreeSet() {
+    Random random = new Random(0xDE1E7E);
+    boolean[] deletionCasesSeen = new boolean[4];
+    for (int trial = 0; trial < 80; trial++) {
+      RedBlackTree tree = new RedBlackTree();
+      TreeSet<Integer> expected = new TreeSet<>();
+      for (int operation = 0; operation < 250; operation++) {
+        int value = random.nextInt(801) - 400;
+        if (random.nextDouble() < .58) assertEquals(expected.add(value), tree.insert(value));
+        else assertEquals(expected.remove(value), tree.delete(value));
+        for (String event : tree.lastEvents()) {
+          for (int deletionCase = 1; deletionCase <= deletionCasesSeen.length; deletionCase++)
+            if (event.contains("case " + deletionCase)) deletionCasesSeen[deletionCase - 1] = true;
+        }
+        assertEquals(new ArrayList<>(expected), tree.inorder());
+        assertEquals(expected.contains(value), tree.contains(value));
+        assertTrue(tree.invariantsHold(), "trial " + trial + ", operation " + operation);
+      }
+    }
+    assertArrayEquals(new boolean[] {true, true, true, true}, deletionCasesSeen);
+  }
+
+  @Test
   void randomizedAvlOperationsMatchTreeSetAndPreserveEveryInvariant() {
     Random random = new Random(0xA71);
     for (int trial = 0; trial < 70; trial++) {

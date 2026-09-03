@@ -33,6 +33,24 @@ class TreeTest {
   }
 
   @Test
+  void redBlackDeletionHandlesLeafOneChildTwoChildrenAndRoot() {
+    RedBlackTree tree = new RedBlackTree();
+    for (int value : new int[] {20, 10, 30, 5, 15, 25, 40, 22, 27}) assertTrue(tree.insert(value));
+    for (int value : new int[] {5, 25, 30, 20}) {
+      assertTrue(tree.delete(value));
+      assertFalse(tree.contains(value));
+      assertTrue(tree.invariantsHold(), "after deleting " + value);
+    }
+    assertFalse(tree.delete(999));
+    assertEquals(List.of(10, 15, 22, 27, 40), tree.inorder());
+    for (int value : List.copyOf(tree.inorder())) {
+      assertTrue(tree.delete(value));
+      assertTrue(tree.invariantsHold());
+    }
+    assertTrue(tree.root().isNil());
+  }
+
+  @Test
   void avlPerformsEveryRotationShapeAndDeletes() {
     int[][] insertions = {{30, 20, 10}, {10, 20, 30}, {30, 10, 20}, {10, 30, 20}};
     String[] expectedEvents = {"LL", "RR", "LR", "RL"};

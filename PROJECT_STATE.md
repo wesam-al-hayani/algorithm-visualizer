@@ -40,14 +40,17 @@ Algorithm Lab V2.0 — Phase 4: balanced trees and persistent structure labs
 - [x] Add an About dialog with project and runtime attribution
 - [x] Add a full AVL tree with insert/search/delete, height and balance metadata, and all four rotation cases
 - [x] Add deterministic AVL rotation tests and 15,400 randomized insert/delete invariant checks
+- [x] Implement Red-Black Tree deletion with successor replacement and double-black repair
+- [x] Expose recoloring, rotations, and all four sibling repair cases to the visualizer
+- [x] Validate Red-Black parent links and run 20,000 randomized mixed operations across every repair case
 
 ## Last Completed Task
 
-AVL tree: interactive operation sequence, LL/RR/LR/RL visualization events, and randomized invariant verification
+Red-Black Tree deletion: full double-black repair visualization and randomized invariant verification
 
 ## Current Task
 
-Implement textbook Red-Black Tree deletion, expose repair events for visualization, and verify randomized insert/delete sequences.
+Implement textbook B-Tree deletion, expose leaf/internal/borrow/merge/root-shrink events, and verify randomized insert/delete sequences.
 
 ## Next Task
 
@@ -77,11 +80,14 @@ Complete the remaining advanced graph algorithms, including mandatory Dinic maxi
 - AVL `./mvnw --batch-mode clean test`: PASS (151 JUnit invocations; 62 catalog demos)
 - AVL JaCoCo core line coverage: 97.83% (1,807 / 1,847 lines); required minimum: 80%
 - AVL JaCoCo core branch coverage: 87.24% (1,183 / 1,356 branches)
+- Red-Black deletion `./mvnw --batch-mode clean test`: PASS (153 JUnit invocations)
+- Red-Black deletion JaCoCo core line coverage: 98.06% (1,916 / 1,954 lines); required minimum: 80%
+- Red-Black deletion JaCoCo core branch coverage: 87.27% (1,241 / 1,422 branches)
 
 ## Known Problems
 
 - Maven is not installed globally; the tested `./mvnw` launcher handles it.
-- Red-Black Tree deletion and B-Tree deletion remain V1 limitations and are mandatory V2 work.
+- B-Tree deletion remains a V1 limitation and is the current mandatory V2 task.
 - V2 implementation is in progress; `main` must not be merged until all mandatory V2 work is verified.
 
 ## GitHub
@@ -91,4 +97,4 @@ Complete the remaining advanced graph algorithms, including mandatory Dinic maxi
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: AVL tree checkpoint ready to commit
+- Pending commits: Red-Black Tree deletion checkpoint ready to commit
