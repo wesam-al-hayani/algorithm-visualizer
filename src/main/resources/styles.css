@@ -21,6 +21,20 @@
 .text-area .content { -fx-background-color: #0e1727; }
 .text-area { -fx-font-family: "SF Mono", "Menlo", monospace; -fx-font-size: 11; }
 .combo-box .list-cell { -fx-text-fill: #eaf0fb; }
+.combo-box-popup .list-view {
+  -fx-background-color: #0e1727;
+  -fx-control-inner-background: #0e1727;
+  -fx-border-color: #31415d;
+}
+.combo-box-popup .list-cell {
+  -fx-background-color: #0e1727;
+  -fx-text-fill: #dbe5f4;
+}
+.combo-box-popup .list-cell:hover,
+.combo-box-popup .list-cell:selected {
+  -fx-background-color: #2b3d5b;
+  -fx-text-fill: #ffffff;
+}
 .button { -fx-background-color: #263650; -fx-text-fill: #edf3fc; -fx-background-radius: 8; -fx-padding: 8 13; -fx-cursor: hand; }
 .button:hover { -fx-background-color: #344a6c; }
 .button:first-child { -fx-background-color: #e9953e; -fx-text-fill: #111827; -fx-font-weight: 800; }
@@ -34,4 +48,3 @@
 .separator .line { -fx-border-color: #2a3850; }
 .split-pane { -fx-background-color: transparent; -fx-padding: 0; }
 .split-pane-divider { -fx-background-color: #0b1220; -fx-padding: 0 5; }
-

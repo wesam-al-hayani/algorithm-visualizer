@@ -107,7 +107,7 @@ public final class AlgorithmVisualizerApp extends Application {
     LinkedHashSet<String> names = new LinkedHashSet<>();
     catalog.forEach(d -> names.add(d.category()));
     categories.getItems().setAll(names);
-    categories.setPrefWidth(235);
+    categories.setPrefWidth(260);
     categories.getStyleClass().add("category-list");
     Label label = new Label("CATEGORIES");
     label.getStyleClass().add("eyebrow");
