@@ -237,6 +237,22 @@ public final class AlgorithmVisualizerApp extends Application {
                 if (isGrid) previewGrid();
               }
             });
+    input
+        .textProperty()
+        .addListener(
+            (observable, oldValue, newValue) -> {
+              if (timeline != null) {
+                stopPlayback();
+                run = null;
+                frame = 0;
+                visualization.show(null);
+                operation.setText("Input changed — press Start to run again");
+                progress.setText("Step 0 / 0");
+                result.setText("");
+                statistics.getChildren().clear();
+                updateButtons(false, false);
+              }
+            });
     start.setOnAction(e -> startRun());
     pause.setOnAction(
         e -> {
