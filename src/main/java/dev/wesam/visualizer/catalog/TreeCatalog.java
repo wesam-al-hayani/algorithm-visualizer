@@ -5,6 +5,7 @@ import static dev.wesam.visualizer.model.AlgorithmStep.VisualKind.*;
 
 import dev.wesam.visualizer.model.AlgorithmRun;
 import dev.wesam.visualizer.model.AlgorithmStep;
+import dev.wesam.visualizer.structures.AvlTree;
 import dev.wesam.visualizer.structures.BTree;
 import dev.wesam.visualizer.structures.BinarySearchTree;
 import dev.wesam.visualizer.structures.RedBlackTree;
@@ -31,6 +32,22 @@ final class TreeCatalog {
               "Values inserted into a BST",
               "8,3,10,1,6,14,4,7,13",
               input -> treeTraversal(input, traversal)));
+    demos.add(
+        demo(
+            "Trees",
+            "AVL Tree",
+            "Maintains a height-balanced BST through LL, RR, LR, and RL rotations after inserts and"
+                + " deletes.",
+            "follow the BST path\n"
+                + "insert, search, or delete the key\n"
+                + "update stored heights upward\n"
+                + "if |balance| > 1, choose LL/RR/LR/RL rotation\n"
+                + "rotate and restore the AVL invariant",
+            "O(log n)",
+            "O(log n)",
+            "Keys; optional ?search or -delete",
+            "30,20,10,25,28,40,50,?28,-20",
+            TreeCatalog::avl));
     demos.add(
         demo(
             "Trees",
@@ -163,6 +180,73 @@ final class TreeCatalog {
     }
     return new AlgorithmRun(
         s, "Inorder: " + tree.inorder() + "; invariants hold: " + tree.invariantsHold());
+  }
+
+  static AlgorithmRun avl(String input) {
+    AvlTree tree = new AvlTree();
+    List<AlgorithmStep> steps = new ArrayList<>();
+    String result = "AVL tree is empty";
+    String[] operations = input.split(",");
+    if (operations.length > 100)
+      throw new IllegalArgumentException("AVL visualization is limited to 100 operations");
+    for (String raw : operations) {
+      String token = raw.trim();
+      int key;
+      boolean changed;
+      int activeLine;
+      if (token.startsWith("?")) {
+        key = Integer.parseInt(token.substring(1));
+        changed = tree.contains(key);
+        activeLine = 1;
+        result = "Search " + key + ": " + changed;
+      } else if (token.startsWith("-")) {
+        key = Integer.parseInt(token.substring(1));
+        changed = tree.delete(key);
+        activeLine =
+            tree.lastEvents().stream().anyMatch(event -> event.contains("rotation")) ? 3 : 1;
+        result = changed ? "Deleted " + key : "Key " + key + " not found";
+      } else {
+        key = Integer.parseInt(token);
+        changed = tree.insert(key);
+        activeLine =
+            tree.lastEvents().stream().anyMatch(event -> event.contains("rotation")) ? 3 : 1;
+        result = changed ? "Inserted " + key : "Key " + key + " already present";
+      }
+      List<AvlTree.NodeView> nodes = tree.levelOrder();
+      List<Integer> values = nodes.stream().map(AvlTree.NodeView::key).toList();
+      int maxBalance =
+          nodes.stream().mapToInt(node -> Math.abs(node.balanceFactor())).max().orElse(0);
+      steps.add(
+          new AlgorithmStep(
+              result,
+              "follow the BST path\n"
+                  + "insert, search, or delete the key\n"
+                  + "update stored heights upward\n"
+                  + "if |balance| > 1, choose LL/RR/LR/RL rotation\n"
+                  + "rotate and restore the AVL invariant",
+              activeLine,
+              TREE,
+              values,
+              List.of(),
+              values.contains(key) ? Set.of(values.indexOf(key)) : Set.of(),
+              Set.of(),
+              Set.of(),
+              List.of(),
+              Map.of(
+                  "Nodes",
+                  values.size(),
+                  "Tree height",
+                  tree.height(),
+                  "Max |balance|",
+                  maxBalance,
+                  "Rotations",
+                  tree.rotations()),
+              "Events: "
+                  + (tree.lastEvents().isEmpty() ? "none" : String.join("; ", tree.lastEvents()))
+                  + "\nInvariants: "
+                  + tree.invariantsHold()));
+    }
+    return new AlgorithmRun(steps, result + "; inorder " + tree.inorder());
   }
 
   static AlgorithmRun bTree(String input) {

@@ -33,6 +33,25 @@ class TreeTest {
   }
 
   @Test
+  void avlPerformsEveryRotationShapeAndDeletes() {
+    int[][] insertions = {{30, 20, 10}, {10, 20, 30}, {30, 10, 20}, {10, 30, 20}};
+    String[] expectedEvents = {"LL", "RR", "LR", "RL"};
+    for (int i = 0; i < insertions.length; i++) {
+      String expectedEvent = expectedEvents[i];
+      AvlTree tree = new AvlTree();
+      for (int value : insertions[i]) assertTrue(tree.insert(value));
+      assertEquals(20, tree.root().key);
+      assertTrue(tree.lastEvents().stream().anyMatch(event -> event.startsWith(expectedEvent)));
+      assertTrue(tree.invariantsHold());
+      assertEquals(2, tree.height());
+      assertTrue(tree.delete(20));
+      assertFalse(tree.delete(20));
+      assertFalse(tree.contains(20));
+      assertTrue(tree.invariantsHold());
+    }
+  }
+
+  @Test
   void bTreeSplitsAndRemainsBalanced() {
     BTree tree = new BTree(2);
     for (int i = 1; i <= 30; i++) {

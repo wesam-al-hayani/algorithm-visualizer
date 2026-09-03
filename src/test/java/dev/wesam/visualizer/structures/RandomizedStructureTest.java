@@ -107,6 +107,23 @@ class RandomizedStructureTest {
   }
 
   @Test
+  void randomizedAvlOperationsMatchTreeSetAndPreserveEveryInvariant() {
+    Random random = new Random(0xA71);
+    for (int trial = 0; trial < 70; trial++) {
+      AvlTree tree = new AvlTree();
+      TreeSet<Integer> expected = new TreeSet<>();
+      for (int operation = 0; operation < 220; operation++) {
+        int value = random.nextInt(601) - 300;
+        if (random.nextBoolean()) assertEquals(expected.add(value), tree.insert(value));
+        else assertEquals(expected.remove(value), tree.delete(value));
+        assertEquals(new ArrayList<>(expected), tree.inorder());
+        assertEquals(expected.contains(value), tree.contains(value));
+        assertTrue(tree.invariantsHold(), "trial " + trial + ", operation " + operation);
+      }
+    }
+  }
+
+  @Test
   void randomizedBTreeInsertionsPreserveOrderingAndBalance() {
     Random random = new Random(0xB7EE);
     for (int degree : new int[] {2, 3, 4, 6}) {

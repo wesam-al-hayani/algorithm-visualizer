@@ -38,14 +38,16 @@ Algorithm Lab V2.0 — Phase 4: balanced trees and persistent structure labs
 - [x] Add complete light/dark themes, focus mode, and keyboard shortcuts
 - [x] Add bounded undo/redo history for interactive grid edits
 - [x] Add an About dialog with project and runtime attribution
+- [x] Add a full AVL tree with insert/search/delete, height and balance metadata, and all four rotation cases
+- [x] Add deterministic AVL rotation tests and 15,400 randomized insert/delete invariant checks
 
 ## Last Completed Task
 
-V2 educational UI: real pseudocode, active-line highlighting, search, favorites/recent history, themes, shortcuts, focus mode, and grid undo/redo
+AVL tree: interactive operation sequence, LL/RR/LR/RL visualization events, and randomized invariant verification
 
 ## Current Task
 
-Implement AVL operations, Red-Black Tree deletion, B-Tree deletion, invariant tests, and persistent data-structure operations.
+Implement textbook Red-Black Tree deletion, expose repair events for visualization, and verify randomized insert/delete sequences.
 
 ## Next Task
 
@@ -72,6 +74,9 @@ Complete the remaining advanced graph algorithms, including mandatory Dinic maxi
 - Phase 3 JaCoCo core branch coverage: 87.29% (1,126 / 1,290 branches)
 - Phase 3 `./mvnw --batch-mode -DskipTests package`: PASS
 - Phase 3 packaged UI smoke test: search, result navigation, favorites, recents, real pseudocode, active-line highlighting, light/dark themes, focus mode, and search/step shortcuts: PASS
+- AVL `./mvnw --batch-mode clean test`: PASS (151 JUnit invocations; 62 catalog demos)
+- AVL JaCoCo core line coverage: 97.83% (1,807 / 1,847 lines); required minimum: 80%
+- AVL JaCoCo core branch coverage: 87.24% (1,183 / 1,356 branches)
 
 ## Known Problems
 
@@ -86,4 +91,4 @@ Complete the remaining advanced graph algorithms, including mandatory Dinic maxi
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 3 educational UI checkpoint ready to commit
+- Pending commits: AVL tree checkpoint ready to commit
