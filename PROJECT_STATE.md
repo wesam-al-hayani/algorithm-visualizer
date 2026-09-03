@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 1 — Project foundation
+Phase 10 — Final verification and release
 
 ## Completed
 
@@ -10,33 +10,41 @@ Phase 1 — Project foundation
 - [x] Confirm repository names are available
 - [x] Create Maven/JavaFX project metadata
 - [x] Add interruption-safe checkpoint script
-- [ ] Create JavaFX application shell
-- [ ] Implement algorithm modules and visualizers
+- [x] Create JavaFX application shell
+- [x] Implement 57 algorithm/data-structure demonstrations
+- [x] Add responsive step-based visualizers and playback controls
+- [x] Add direct grid editing and maze generation
+- [x] Add JUnit correctness, invariant, and catalog coverage tests
+- [x] Add algorithm coverage and project documentation
 - [ ] Complete automated and manual verification
 
 ## Last Completed Task
 
-Repository-local Maven launcher and checkpoint tooling
+Documentation and coverage matrix
 
 ## Current Task
 
-JavaFX application shell and continuous integration
+Full clean build and final manual UI sweep
 
 ## Next Task
 
-Sorting, searching, and selection algorithms
+Merge verified release to `main`
 
 ## Tests
 
-Not started
+- 22 JUnit test methods: PASS
+- Every one of 57 demo default inputs: PASS
+- Latest `./mvnw test`: PASS
+- `./mvnw clean test`: pending final release run
 
 ## Known Problems
 
-- Maven is not installed globally; use `./mvnw`.
+- Maven is not installed globally; the tested `./mvnw` launcher handles it.
+- Red-Black Tree deletion and B-Tree deletion are intentionally outside the visible feature set, as documented.
 
 ## GitHub
 
-- Repository: `wesam-al-hayani/algorithm-visualizer` (creation pending initial commit)
-- Last push successful: no
-- Pending commits: yes
-
+- Repository: `wesam-al-hayani/algorithm-visualizer`
+- Development branch: `codex-work`
+- Last push successful: yes
+- Pending commits: yes (documentation/final verification checkpoint)

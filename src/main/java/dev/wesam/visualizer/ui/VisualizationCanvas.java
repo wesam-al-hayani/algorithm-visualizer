@@ -10,6 +10,7 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 
 public final class VisualizationCanvas extends Region {
     private static final Color BACKGROUND = Color.web("#101827");
@@ -21,16 +22,19 @@ public final class VisualizationCanvas extends Region {
     private static final Color TEXT = Color.web("#eaf0fb");
     private final Canvas canvas = new Canvas();
     private AlgorithmStep step;
+    private BiConsumer<Integer,Integer> gridClickHandler;
 
     public VisualizationCanvas() {
         getChildren().add(canvas);
         widthProperty().addListener((o,a,b)->redraw());
         heightProperty().addListener((o,a,b)->redraw());
         setMinSize(360, 300);
+        canvas.setOnMouseClicked(event->{int[]cell=gridCellAt(event.getX(),event.getY());if(cell!=null&&gridClickHandler!=null)gridClickHandler.accept(cell[0],cell[1]);});
     }
 
     public void show(AlgorithmStep value) { step=value; redraw(); }
     public AlgorithmStep currentStep() { return step; }
+    public void setOnGridCellClicked(BiConsumer<Integer,Integer> handler){gridClickHandler=handler;}
 
     @Override protected void layoutChildren() { canvas.setWidth(getWidth()); canvas.setHeight(getHeight()); redraw(); }
     @Override protected double computePrefWidth(double h){return 720;}
@@ -72,8 +76,10 @@ public final class VisualizationCanvas extends Region {
 
     private void drawGrid(GraphicsContext g,double w,double h){
         int columns=columnsFromDetails();if(columns<=0)columns=(int)Math.ceil(Math.sqrt(step.values().size()));int rows=(int)Math.ceil(step.values().size()/(double)columns);double cell=Math.min((w-32)/columns,(h-32)/rows),left=(w-cell*columns)/2,top=(h-cell*rows)/2;
-        for(int i=0;i<step.values().size();i++){int r=i/columns,c=i%columns;Color fill=step.values().get(i)==1?Color.web("#070b12"):color(i);g.setFill(fill);g.fillRoundRect(left+c*cell+2,top+r*cell+2,cell-4,cell-4,6,6);if(i==0||i==step.values().size()-1){g.setFill(TEXT);g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font("System",FontWeight.BOLD,Math.min(14,cell*.35)));g.fillText(i==0?"S":"T",left+(c+.5)*cell,top+(r+.62)*cell);}}
+        for(int i=0;i<step.values().size();i++){int r=i/columns,c=i%columns;Color fill=step.values().get(i)==1?Color.web("#070b12"):color(i);g.setFill(fill);g.fillRoundRect(left+c*cell+2,top+r*cell+2,cell-4,cell-4,6,6);String symbol=i<step.labels().size()?step.labels().get(i):".";if(symbol.equals("S")||symbol.equals("T")){g.setFill(TEXT);g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font("System",FontWeight.BOLD,Math.min(14,cell*.35)));g.fillText(symbol,left+(c+.5)*cell,top+(r+.62)*cell);}}
     }
+
+    private int[] gridCellAt(double x,double y){if(step==null||step.kind()!=AlgorithmStep.VisualKind.GRID)return null;int columns=columnsFromDetails();if(columns<=0)return null;int rows=(int)Math.ceil(step.values().size()/(double)columns);double cell=Math.min((canvas.getWidth()-32)/columns,(canvas.getHeight()-32)/rows),left=(canvas.getWidth()-cell*columns)/2,top=(canvas.getHeight()-cell*rows)/2;int column=(int)((x-left)/cell),row=(int)((y-top)/cell);return row>=0&&column>=0&&row<rows&&column<columns?new int[]{row,column}:null;}
 
     private void drawTable(GraphicsContext g,double w,double h){
         int columns=columnsFromDetails();if(columns<=0)columns=Math.max(1,(int)Math.ceil(Math.sqrt(Math.max(1,step.labels().size()))));int rows=(int)Math.ceil(step.labels().size()/(double)columns);double cellW=Math.min(72,(w-32)/columns),cellH=Math.min(52,(h-32)/Math.max(1,rows)),left=(w-cellW*columns)/2,top=(h-cellH*rows)/2;g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font(12));for(int i=0;i<step.labels().size();i++){int r=i/columns,c=i%columns;g.setFill(color(i));g.fillRoundRect(left+c*cellW+2,top+r*cellH+2,cellW-4,cellH-4,8,8);g.setFill(TEXT);g.fillText(step.labels().get(i),left+(c+.5)*cellW,top+(r+.58)*cellH);}
@@ -87,4 +93,3 @@ public final class VisualizationCanvas extends Region {
     private Color color(int index){if(step.active().contains(index))return ACTIVE;if(step.secondary().contains(index))return SECONDARY;if(step.complete().contains(index))return COMPLETE;return NORMAL;}
     private void drawCentered(GraphicsContext g,double w,double h,String text){g.setFill(TEXT);g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font("System",16));g.fillText(text==null?"":text,w/2,h/2,Math.max(0,w-60));}
 }
-
