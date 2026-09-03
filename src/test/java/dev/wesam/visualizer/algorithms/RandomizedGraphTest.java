@@ -142,6 +142,23 @@ class RandomizedGraphTest {
   }
 
   @Test
+  void randomizedDinicAndEdmondsKarpAlwaysAgree() {
+    Random random = new Random(0xD1A1C);
+    for (int trial = 0; trial < 500; trial++) {
+      int vertices = 2 + random.nextInt(9);
+      int[][] capacity = new int[vertices][vertices];
+      for (int from = 0; from < vertices; from++)
+        for (int to = 0; to < vertices; to++)
+          if (from != to && random.nextDouble() < .27) capacity[from][to] = random.nextInt(21);
+      FlowResult edmonds = edmondsKarp(capacity, 0, vertices - 1);
+      DinicResult dinic = dinic(capacity, 0, vertices - 1);
+      assertEquals(edmonds.maximumFlow(), dinic.maximumFlow(), "trial " + trial);
+      assertEquals(edmonds.sourceSideOfMinCut()[0], dinic.sourceSideOfMinCut()[0]);
+      assertFalse(dinic.sourceSideOfMinCut()[vertices - 1]);
+    }
+  }
+
+  @Test
   void randomizedTraversalsVisitExactlyTheReachableVertices() {
     Random random = new Random(0xBF5);
     for (int trial = 0; trial < 60; trial++) {
@@ -214,6 +231,8 @@ class RandomizedGraphTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> hopcroftKarp(new boolean[][] {{true}, {true, false}}));
+    assertThrows(IllegalArgumentException.class, () -> dinic(new int[][] {{0, -1}, {0, 0}}, 0, 1));
+    assertThrows(IllegalArgumentException.class, () -> dinic(new int[][] {{0}, {0, 0}}, 0, 1));
     assertThrows(
         IllegalArgumentException.class,
         () ->

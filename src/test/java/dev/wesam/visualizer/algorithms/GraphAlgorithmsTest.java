@@ -239,6 +239,17 @@ class GraphAlgorithmsTest {
     assertEquals(23, result.maximumFlow());
     assertTrue(result.sourceSideOfMinCut()[0]);
     assertFalse(result.sourceSideOfMinCut()[5]);
+    assertTrue(result.bfsPhases() > 0);
+    assertEquals(result.bfsPhases(), result.augmentations());
+
+    DinicResult dinic = dinic(capacity, 0, 5);
+    assertEquals(23, dinic.maximumFlow());
+    assertTrue(dinic.sourceSideOfMinCut()[0]);
+    assertFalse(dinic.sourceSideOfMinCut()[5]);
+    assertTrue(dinic.bfsPhases() > 0);
+    assertTrue(dinic.dfsPushes() >= dinic.augmentations());
+    assertTrue(dinic.frames().stream().anyMatch(frame -> !frame.augmentingPath().isEmpty()));
+    assertTrue(dinic.frames().stream().anyMatch(frame -> frame.event().startsWith("Blocking")));
   }
 
   @Test

@@ -17,6 +17,9 @@ import java.util.Map;
 import java.util.Set;
 
 final class GraphCatalog {
+  private static final String CLASSIC_FLOW_NETWORK =
+      "0,16,13,0,0,0/0,0,10,12,0,0/0,4,0,0,14,0/0,0,9,0,0,20/0,0,0,7,0,4/0,0,0,0,0,0 ; 0,5";
+
   private GraphCatalog() {}
 
   static List<AlgorithmDemo> create() {
@@ -263,9 +266,43 @@ final class GraphCatalog {
                 + "  update forward and reverse residual edges",
             "O(VE²)",
             "O(V²)",
-            "Uses the classic six-vertex network",
-            "classic network",
+            "Capacity rows separated by /; then ; source,sink",
+            CLASSIC_FLOW_NETWORK,
             GraphCatalog::maxFlow));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Dinic's Maximum Flow Algorithm",
+            "BFS creates a level graph and DFS sends a blocking flow through admissible residual"
+                + " edges.",
+            "initialize the residual graph\n"
+                + "while BFS reaches the sink and assigns levels\n"
+                + "  reset current-edge pointers\n"
+                + "  DFS along level-increasing residual edges\n"
+                + "  update forward/reverse residual capacity and total flow\n"
+                + "  finish the blocking flow for this level graph\n"
+                + "residual reachability gives the minimum cut",
+            "O(V²E)",
+            "O(V²)",
+            "Capacity rows separated by /; then ; source,sink",
+            CLASSIC_FLOW_NETWORK,
+            GraphCatalog::dinic));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Edmonds–Karp vs Dinic",
+            "Runs both maximum-flow algorithms on the same network and compares flow and search"
+                + " metrics.",
+            "parse one shared capacity network\n"
+                + "run Edmonds–Karp BFS augmentations\n"
+                + "run Dinic level graphs and blocking flows\n"
+                + "compare maximum flow, phases, augmentations, and steps\n"
+                + "require both maximum-flow values to agree",
+            "O(VE²) vs O(V²E)",
+            "O(V²)",
+            "Capacity rows separated by /; then ; source,sink",
+            CLASSIC_FLOW_NETWORK,
+            GraphCatalog::flowComparison));
     demos.add(
         demo(
             "Graph Algorithms",
@@ -920,32 +957,210 @@ final class GraphCatalog {
 
   private record GraphQuery(GraphAlgorithms.Graph graph, int source, int target) {}
 
-  static AlgorithmRun maxFlow(String ignored) {
-    int[][] c = {
-      {0, 16, 13, 0, 0, 0},
-      {0, 0, 10, 12, 0, 0},
-      {0, 4, 0, 0, 14, 0},
-      {0, 0, 9, 0, 0, 20},
-      {0, 0, 0, 7, 0, 4},
-      {0, 0, 0, 0, 0, 0}
-    };
-    var r = GraphAlgorithms.edmondsKarp(c, 0, 5);
-    GraphAlgorithms.Graph g = capacityGraph(c);
+  static AlgorithmRun maxFlow(String input) {
+    FlowNetwork network = flowNetwork(input);
+    int[][] capacity = network.capacity;
+    var r = GraphAlgorithms.edmondsKarp(capacity, network.source, network.sink);
+    GraphAlgorithms.Graph g = capacityGraph(capacity);
     Set<Integer> source = new LinkedHashSet<>();
     for (int i = 0; i < r.sourceSideOfMinCut().length; i++)
       if (r.sourceSideOfMinCut()[i]) source.add(i);
+    AlgorithmStep finalStep =
+        graphStep(
+            "Maximum flow complete; partitions show the minimum cut",
+            g,
+            Set.of(network.source, network.sink),
+            source,
+            rangeSet(0, capacity.length - 1),
+            Map.of(
+                "Maximum flow",
+                r.maximumFlow(),
+                "BFS phases",
+                r.bfsPhases(),
+                "Augmentations",
+                r.augmentations(),
+                "Steps",
+                r.steps()),
+            "Residual network: " + Arrays.deepToString(r.residual()));
     return new AlgorithmRun(
-        List.of(
-            graphStep(
-                "Maximum flow complete; partitions show the minimum cut",
-                g,
-                Set.of(0, 5),
-                source,
-                rangeSet(0, 5),
-                Map.of("Maximum flow", r.maximumFlow(), "Source-side vertices", source.size()),
-                "Residual network computed by Edmonds–Karp")),
-        "Maximum flow = minimum cut capacity = " + r.maximumFlow());
+        List.of(finalStep), "Maximum flow = minimum cut capacity = " + r.maximumFlow());
   }
+
+  static AlgorithmRun dinic(String input) {
+    FlowNetwork network = flowNetwork(input);
+    GraphAlgorithms.DinicResult result =
+        GraphAlgorithms.dinic(network.capacity, network.source, network.sink);
+    GraphAlgorithms.Graph graph = capacityGraph(network.capacity);
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (int index = 0; index < result.frames().size(); index++) {
+      GraphAlgorithms.DinicFrame frame = result.frames().get(index);
+      Set<Integer> levelVertices = new LinkedHashSet<>();
+      for (int vertex = 0; vertex < frame.level().length; vertex++)
+        if (frame.level()[vertex] >= 0) levelVertices.add(vertex);
+      Set<Integer> sourceSide = new LinkedHashSet<>();
+      if (index == result.frames().size() - 1)
+        for (int vertex = 0; vertex < result.sourceSideOfMinCut().length; vertex++)
+          if (result.sourceSideOfMinCut()[vertex]) sourceSide.add(vertex);
+      steps.add(
+          new AlgorithmStep(
+              frame.event(),
+              "initialize residual graph\n"
+                  + "build BFS level graph\n"
+                  + "reset current edges\n"
+                  + "DFS admissible edges\n"
+                  + "update residual capacity\n"
+                  + "complete blocking flow\n"
+                  + "extract minimum cut",
+              frame.event().startsWith("BFS") ? 1 : frame.event().startsWith("DFS") ? 4 : 5,
+              GRAPH,
+              List.of(),
+              labels(network.capacity.length),
+              Set.copyOf(frame.augmentingPath()),
+              levelVertices,
+              sourceSide,
+              flowVisualEdges(network.capacity, frame.residual()),
+              Map.of(
+                  "BFS phases",
+                  result.bfsPhases(),
+                  "DFS pushes",
+                  result.dfsPushes(),
+                  "Augmentations",
+                  result.augmentations(),
+                  "Current flow",
+                  frame.totalFlow(),
+                  "Maximum flow",
+                  result.maximumFlow()),
+              "Levels: "
+                  + Arrays.toString(frame.level())
+                  + "\nAdmissible edges: "
+                  + admissibleEdges(frame.level(), frame.residual())
+                  + "\nDFS path: "
+                  + frame.augmentingPath()
+                  + "; pushed "
+                  + frame.pushed()
+                  + "\nCapacity: "
+                  + Arrays.deepToString(network.capacity)
+                  + "\nCurrent net flow: "
+                  + Arrays.deepToString(flowMatrix(network.capacity, frame.residual()))
+                  + "\nResidual: "
+                  + Arrays.deepToString(frame.residual())));
+    }
+    return new AlgorithmRun(
+        steps,
+        "Dinic maximum flow: "
+            + result.maximumFlow()
+            + "; BFS phases "
+            + result.bfsPhases()
+            + "; DFS pushes "
+            + result.dfsPushes()
+            + "; augmentations "
+            + result.augmentations());
+  }
+
+  static AlgorithmRun flowComparison(String input) {
+    FlowNetwork network = flowNetwork(input);
+    GraphAlgorithms.FlowResult edmonds =
+        GraphAlgorithms.edmondsKarp(network.capacity, network.source, network.sink);
+    GraphAlgorithms.DinicResult dinic =
+        GraphAlgorithms.dinic(network.capacity, network.source, network.sink);
+    boolean agree = edmonds.maximumFlow() == dinic.maximumFlow();
+    List<String> table =
+        List.of(
+            "Algorithm",
+            "Maximum Flow",
+            "BFS Phases",
+            "Augmentations",
+            "Steps",
+            "Edmonds–Karp",
+            Integer.toString(edmonds.maximumFlow()),
+            Integer.toString(edmonds.bfsPhases()),
+            Integer.toString(edmonds.augmentations()),
+            Integer.toString(edmonds.steps()),
+            "Dinic",
+            Integer.toString(dinic.maximumFlow()),
+            Integer.toString(dinic.bfsPhases()),
+            Integer.toString(dinic.augmentations()),
+            Integer.toString(dinic.steps()));
+    AlgorithmStep step =
+        new AlgorithmStep(
+            agree ? "Both algorithms agree" : "Maximum-flow mismatch detected",
+            "parse network\nrun Edmonds–Karp\nrun Dinic\ncompare metrics\nverify equal flow",
+            4,
+            TABLE,
+            List.of(),
+            table,
+            rangeSet(5, 14),
+            Set.of(),
+            Set.of(),
+            List.of(),
+            Map.of("Maximum flow", dinic.maximumFlow(), "Algorithms agree", agree ? 1 : 0),
+            "columns=5\nEdmonds–Karp and Dinic ran on the same capacity matrix");
+    return new AlgorithmRun(
+        List.of(step),
+        "Edmonds–Karp="
+            + edmonds.maximumFlow()
+            + ", Dinic="
+            + dinic.maximumFlow()
+            + ", agree="
+            + agree);
+  }
+
+  private static FlowNetwork flowNetwork(String input) {
+    String[] parts = input.split(";", 2);
+    if (parts.length != 2) throw new IllegalArgumentException("Use capacity rows ; source,sink");
+    String[] rows = parts[0].trim().split("/");
+    if (rows.length < 2 || rows.length > 30)
+      throw new IllegalArgumentException("Flow networks require 2 to 30 vertices");
+    int[][] capacity = new int[rows.length][];
+    for (int row = 0; row < rows.length; row++) {
+      capacity[row] = numbers(rows[row]);
+      if (capacity[row].length != rows.length)
+        throw new IllegalArgumentException("Capacity matrix must be square");
+    }
+    int[] endpoints = numbers(parts[1]);
+    if (endpoints.length != 2)
+      throw new IllegalArgumentException("Choose exactly one source and sink");
+    return new FlowNetwork(capacity, endpoints[0], endpoints[1]);
+  }
+
+  private static List<AlgorithmStep.VisualEdge> flowVisualEdges(
+      int[][] capacity, int[][] residual) {
+    List<AlgorithmStep.VisualEdge> edges = new ArrayList<>();
+    for (int from = 0; from < capacity.length; from++)
+      for (int to = 0; to < capacity.length; to++)
+        if (capacity[from][to] > 0)
+          edges.add(
+              new AlgorithmStep.VisualEdge(
+                  from,
+                  to,
+                  capacity[from][to],
+                  true,
+                  (capacity[from][to] - residual[from][to])
+                      + "/"
+                      + capacity[from][to]
+                      + " r="
+                      + residual[from][to]));
+    return edges;
+  }
+
+  private static List<String> admissibleEdges(int[] level, int[][] residual) {
+    List<String> edges = new ArrayList<>();
+    for (int from = 0; from < residual.length; from++)
+      for (int to = 0; to < residual.length; to++)
+        if (level[from] >= 0 && residual[from][to] > 0 && level[to] == level[from] + 1)
+          edges.add(from + "→" + to);
+    return edges;
+  }
+
+  private static int[][] flowMatrix(int[][] capacity, int[][] residual) {
+    int[][] flow = new int[capacity.length][capacity.length];
+    for (int from = 0; from < capacity.length; from++)
+      for (int to = 0; to < capacity.length; to++)
+        flow[from][to] = capacity[from][to] - residual[from][to];
+    return flow;
+  }
+
+  private record FlowNetwork(int[][] capacity, int source, int sink) {}
 
   static AlgorithmRun matching(String input) {
     boolean[][] e = bipartiteMatrix(input);

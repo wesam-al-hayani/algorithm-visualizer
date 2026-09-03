@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 6: Dinic maximum flow
+Algorithm Lab V2.0 — Phase 7: real maze generation and grid behavior
 
 ## Completed
 
@@ -59,18 +59,22 @@ Algorithm Lab V2.0 — Phase 6: Dinic maximum flow
 - [x] Add BFS bipartite coloring with explicit conflict-edge reporting
 - [x] Add Hopcroft-Karp BFS/DFS phase visualization and comparison with simple matching
 - [x] Cross-validate Tarjan/Kosaraju, low-link removal definitions, and both matching algorithms on randomized inputs
+- [x] Implement Dinic's maximum-flow algorithm with BFS level graphs and DFS blocking flows
+- [x] Visualize Dinic levels, admissible edges, augmenting paths, residual capacities, flow, and minimum cut
+- [x] Add an Edmonds–Karp vs Dinic comparison table with phases, augmentations, and step metrics
+- [x] Cross-validate Dinic against Edmonds–Karp on 500 deterministic randomized flow networks
 
 ## Last Completed Task
 
-Phase 5 graph expansion: all mandatory shortest-path, connectivity, Euler, coloring, and matching algorithms
+Phase 6 maximum flow: Dinic, Edmonds–Karp comparison, and randomized cross-validation
 
 ## Current Task
 
-Implement mandatory Dinic maximum flow, expose level-graph/blocking-flow phases, and compare/cross-validate against Edmonds-Karp.
+Implement real maze-generation algorithms and finish grid-editing behavior.
 
 ## Next Task
 
-Add real maze-generation algorithms and finish grid-editing behavior.
+Add sorting/shortest-path comparison modes and sorting race.
 
 ## Tests
 
@@ -113,6 +117,11 @@ Add real maze-generation algorithms and finish grid-editing behavior.
 - Phase 5 final `./mvnw --batch-mode clean test`: PASS (166 JUnit invocations; 71 catalog demos)
 - Phase 5 final JaCoCo core line coverage: 98.35% (2,499 / 2,541 lines); required minimum: 80%
 - Phase 5 final JaCoCo core branch coverage: 87.91% (1,571 / 1,787 branches)
+- Phase 6 Dinic `./mvnw --batch-mode clean test`: PASS (167 JUnit invocations; 73 catalog demos)
+- Phase 6 Dinic JaCoCo core line coverage: 98.43% (2,574 / 2,615 lines); required minimum: 80%
+- Phase 6 Dinic JaCoCo core branch coverage: 88.18% (1,597 / 1,811 branches)
+- Phase 6 Dinic `./mvnw --batch-mode -DskipTests package`: PASS
+- Phase 6 packaged-app launch: app image created and launched; visual interaction deferred because macOS was locked
 
 ## Known Problems
 
@@ -126,4 +135,4 @@ Add real maze-generation algorithms and finish grid-editing behavior.
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 5 graph-expansion checkpoint ready to commit
+- Pending commits: Phase 6 Dinic checkpoint ready to commit

@@ -245,6 +245,37 @@ public final class GraphAlgorithms {
     }
   }
 
+  public record DinicFrame(
+      int phase,
+      int[] level,
+      List<Integer> augmentingPath,
+      int pushed,
+      int totalFlow,
+      int[][] residual,
+      String event) {
+    public DinicFrame {
+      level = level.clone();
+      augmentingPath = List.copyOf(augmentingPath);
+      residual = copy(residual);
+    }
+  }
+
+  public record DinicResult(
+      int maximumFlow,
+      int[][] residual,
+      boolean[] sourceSideOfMinCut,
+      int bfsPhases,
+      int dfsPushes,
+      int augmentations,
+      int steps,
+      List<DinicFrame> frames) {
+    public DinicResult {
+      residual = copy(residual);
+      sourceSideOfMinCut = sourceSideOfMinCut.clone();
+      frames = List.copyOf(frames);
+    }
+  }
+
   public static List<Integer> bfs(Graph graph, int start) {
     checkVertex(graph, start);
     List<List<Edge>> adj = graph.adjacency();
@@ -1076,6 +1107,140 @@ public final class GraphAlgorithms {
 
   /** Edmonds-Karp. Returns max flow, residual matrix and source side of the minimum cut. */
   public static FlowResult edmondsKarp(int[][] capacity, int source, int sink) {
+    int[][] residual = validatedCapacityCopy(capacity, source, sink);
+    int n = capacity.length;
+    int maxFlow = 0;
+    int bfsPhases = 0, augmentations = 0, steps = 0;
+    int[] parent = new int[n];
+    while (true) {
+      steps++;
+      if (!flowBfs(residual, source, sink, parent)) break;
+      bfsPhases++;
+      augmentations++;
+      int bottleneck = Integer.MAX_VALUE;
+      for (int v = sink; v != source; v = parent[v])
+        bottleneck = Math.min(bottleneck, residual[parent[v]][v]);
+      for (int v = sink; v != source; v = parent[v]) {
+        int u = parent[v];
+        residual[u][v] -= bottleneck;
+        residual[v][u] += bottleneck;
+        steps++;
+      }
+      maxFlow = Math.addExact(maxFlow, bottleneck);
+    }
+    boolean[] sourceSide = residualReachable(residual, source);
+    return new FlowResult(maxFlow, residual, sourceSide, bfsPhases, augmentations, steps);
+  }
+
+  /** Dinic's algorithm: repeated BFS level graphs followed by DFS blocking flows. */
+  public static DinicResult dinic(int[][] capacity, int source, int sink) {
+    int[][] residual = validatedCapacityCopy(capacity, source, sink);
+    int n = capacity.length;
+    int[] level = new int[n];
+    int totalFlow = 0, phase = 0, augmentations = 0;
+    DinicMetrics metrics = new DinicMetrics();
+    List<DinicFrame> frames = new ArrayList<>();
+    while (dinicBfs(residual, source, sink, level, metrics)) {
+      phase++;
+      frames.add(
+          new DinicFrame(
+              phase, level, List.of(), 0, totalFlow, residual, "BFS builds the level graph"));
+      int[] next = new int[n];
+      while (true) {
+        List<Integer> path = new ArrayList<>();
+        path.add(source);
+        int pushed =
+            dinicDfs(source, sink, Integer.MAX_VALUE, residual, level, next, path, metrics);
+        if (pushed == 0) break;
+        totalFlow = Math.addExact(totalFlow, pushed);
+        augmentations++;
+        frames.add(
+            new DinicFrame(
+                phase,
+                level,
+                path,
+                pushed,
+                totalFlow,
+                residual,
+                "DFS pushes flow along an admissible path"));
+      }
+      frames.add(
+          new DinicFrame(
+              phase,
+              level,
+              List.of(),
+              0,
+              totalFlow,
+              residual,
+              "Blocking flow completes this level graph"));
+    }
+    return new DinicResult(
+        totalFlow,
+        residual,
+        residualReachable(residual, source),
+        phase,
+        metrics.dfsPushes,
+        augmentations,
+        metrics.steps,
+        frames);
+  }
+
+  private static boolean dinicBfs(
+      int[][] residual, int source, int sink, int[] level, DinicMetrics metrics) {
+    Arrays.fill(level, -1);
+    level[source] = 0;
+    Queue<Integer> queue = new ArrayDeque<>();
+    queue.add(source);
+    while (!queue.isEmpty()) {
+      int u = queue.remove();
+      for (int v = 0; v < residual.length; v++) {
+        metrics.steps++;
+        if (level[v] < 0 && residual[u][v] > 0) {
+          level[v] = level[u] + 1;
+          queue.add(v);
+        }
+      }
+    }
+    return level[sink] >= 0;
+  }
+
+  private static int dinicDfs(
+      int current,
+      int sink,
+      int available,
+      int[][] residual,
+      int[] level,
+      int[] next,
+      List<Integer> path,
+      DinicMetrics metrics) {
+    if (current == sink) return available;
+    for (; next[current] < residual.length; next[current]++) {
+      int target = next[current];
+      metrics.steps++;
+      if (residual[current][target] <= 0 || level[target] != level[current] + 1) continue;
+      path.add(target);
+      int pushed =
+          dinicDfs(
+              target,
+              sink,
+              Math.min(available, residual[current][target]),
+              residual,
+              level,
+              next,
+              path,
+              metrics);
+      if (pushed > 0) {
+        residual[current][target] -= pushed;
+        residual[target][current] += pushed;
+        metrics.dfsPushes++;
+        return pushed;
+      }
+      path.remove(path.size() - 1);
+    }
+    return 0;
+  }
+
+  private static int[][] validatedCapacityCopy(int[][] capacity, int source, int sink) {
     int n = capacity.length;
     if (n == 0 || source < 0 || sink < 0 || source >= n || sink >= n || source == sink)
       throw new IllegalArgumentException("invalid source or sink");
@@ -1088,32 +1253,23 @@ public final class GraphAlgorithms {
         residual[i][j] = capacity[i][j];
       }
     }
-    int maxFlow = 0;
-    int[] parent = new int[n];
-    while (flowBfs(residual, source, sink, parent)) {
-      int bottleneck = Integer.MAX_VALUE;
-      for (int v = sink; v != source; v = parent[v])
-        bottleneck = Math.min(bottleneck, residual[parent[v]][v]);
-      for (int v = sink; v != source; v = parent[v]) {
-        int u = parent[v];
-        residual[u][v] -= bottleneck;
-        residual[v][u] += bottleneck;
-      }
-      maxFlow += bottleneck;
-    }
-    boolean[] sourceSide = new boolean[n];
+    return residual;
+  }
+
+  private static boolean[] residualReachable(int[][] residual, int source) {
+    boolean[] sourceSide = new boolean[residual.length];
     Queue<Integer> queue = new ArrayDeque<>();
     queue.add(source);
     sourceSide[source] = true;
     while (!queue.isEmpty()) {
-      int u = queue.remove();
-      for (int v = 0; v < n; v++)
-        if (!sourceSide[v] && residual[u][v] > 0) {
-          sourceSide[v] = true;
-          queue.add(v);
+      int current = queue.remove();
+      for (int target = 0; target < residual.length; target++)
+        if (!sourceSide[target] && residual[current][target] > 0) {
+          sourceSide[target] = true;
+          queue.add(target);
         }
     }
-    return new FlowResult(maxFlow, residual, sourceSide);
+    return sourceSide;
   }
 
   private static boolean flowBfs(int[][] residual, int source, int sink, int[] parent) {
@@ -1133,7 +1289,13 @@ public final class GraphAlgorithms {
     return false;
   }
 
-  public record FlowResult(int maximumFlow, int[][] residual, boolean[] sourceSideOfMinCut) {
+  public record FlowResult(
+      int maximumFlow,
+      int[][] residual,
+      boolean[] sourceSideOfMinCut,
+      int bfsPhases,
+      int augmentations,
+      int steps) {
     public FlowResult {
       int[][] copy = new int[residual.length][];
       for (int i = 0; i < residual.length; i++) copy[i] = residual[i].clone();
@@ -1151,6 +1313,11 @@ public final class GraphAlgorithms {
   private record UndirectedArc(int to, int edgeId) {}
 
   private record TraversalArc(int to, int edgeId) {}
+
+  private static final class DinicMetrics {
+    private int dfsPushes;
+    private int steps;
+  }
 
   private static long[][] copy(long[][] source) {
     long[][] result = new long[source.length][];
