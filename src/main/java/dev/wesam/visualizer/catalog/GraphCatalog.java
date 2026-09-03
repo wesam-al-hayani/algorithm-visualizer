@@ -88,6 +88,61 @@ final class GraphCatalog {
             "0>1:4,0>2:5,1>2:-2,2>3:3,3>4:1",
             "bellman"));
     demos.add(
+        demo(
+            "Graph Algorithms",
+            "Floyd–Warshall",
+            "Dynamic programming permits each vertex in turn as an intermediate for every"
+                + " source-target pair.",
+            "initialize the distance and next matrices\n"
+                + "for each intermediate vertex k\n"
+                + "  for each source i and target j\n"
+                + "    candidate ← distance[i,k] + distance[k,j]\n"
+                + "    if candidate improves distance[i,j]\n"
+                + "      update distance[i,j] and next[i,j]\n"
+                + "check distance[v,v] for negative cycles\n"
+                + "reconstruct the selected path through next",
+            "O(V³)",
+            "O(V²)",
+            "Directed weighted edges; then ; source,target",
+            "0>1:3,0>3:7,1>0:8,1>2:2,2>0:5,2>3:1,3>0:2 ; 0,2",
+            input -> allPairs(input, false)));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Johnson's Algorithm",
+            "Sparse all-pairs shortest paths combine Bellman–Ford reweighting with Dijkstra from"
+                + " every vertex.",
+            "add a zero-edge super-source\n"
+                + "run Bellman–Ford to detect a negative cycle\n"
+                + "use its distances as vertex potentials\n"
+                + "reweight every edge to be non-negative\n"
+                + "run Dijkstra from every source\n"
+                + "restore the original all-pairs distances",
+            "O(VE log V)",
+            "O(V² + E)",
+            "Directed weighted edges; then ; source,target",
+            "0>1:1,0>2:4,1>2:-2,1>3:5,2>3:2,3>0:3 ; 0,3",
+            input -> allPairs(input, true)));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "A* on Weighted Graph",
+            "A priority queue combines path cost with a Euclidean coordinate heuristic to reach one"
+                + " target.",
+            "gScore[start] ← 0; put start in open set\n"
+                + "remove vertex with smallest fScore\n"
+                + "move it from open set to closed set\n"
+                + "for each outgoing edge, compute tentative gScore\n"
+                + "if improved, record parent and gScore\n"
+                + "hScore ← Euclidean distance to target\n"
+                + "fScore ← gScore + hScore\n"
+                + "reconstruct the path when target closes",
+            "O((V + E) log V)",
+            "O(V)",
+            "Non-negative directed edges; then ; target (source is 0)",
+            "0>1:2,0>2:5,1>2:1,1>3:4,2>3:1,3>4:2,2>4:6 ; 4",
+            GraphCatalog::graphAStar));
+    demos.add(
         graphDemo(
             "Kruskal Minimum Spanning Tree",
             "Takes edges by weight while Union-Find rejects cycles.",
@@ -308,6 +363,217 @@ final class GraphCatalog {
     }
     return new AlgorithmRun(s, uf.toString());
   }
+
+  static AlgorithmRun allPairs(String input, boolean useJohnson) {
+    GraphQuery query = graphQuery(input, true, true);
+    GraphAlgorithms.AllPairsShortestPaths result =
+        useJohnson
+            ? GraphAlgorithms.johnson(query.graph)
+            : GraphAlgorithms.floydWarshall(query.graph);
+    if (useJohnson) return johnsonFrames(query, result);
+    return floydWarshallFrames(query, result);
+  }
+
+  private static AlgorithmRun floydWarshallFrames(
+      GraphQuery query, GraphAlgorithms.AllPairsShortestPaths expected) {
+    GraphAlgorithms.Graph graph = query.graph;
+    int n = graph.vertices();
+    long[][] distance = new long[n][n];
+    for (int row = 0; row < n; row++) {
+      Arrays.fill(distance[row], GraphAlgorithms.INF);
+      distance[row][row] = 0;
+    }
+    for (GraphAlgorithms.Edge edge : graph.edges())
+      distance[edge.from()][edge.to()] = Math.min(distance[edge.from()][edge.to()], edge.weight());
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (int intermediate = 0; intermediate < n; intermediate++) {
+      Set<Integer> updated = new LinkedHashSet<>();
+      Set<Integer> compared = new LinkedHashSet<>();
+      for (int from = 0; from < n; from++) {
+        compared.add(from * n + intermediate);
+        for (int to = 0; to < n; to++) {
+          compared.add(intermediate * n + to);
+          if (distance[from][intermediate] < GraphAlgorithms.INF
+              && distance[intermediate][to] < GraphAlgorithms.INF
+              && distance[from][to] > distance[from][intermediate] + distance[intermediate][to]) {
+            distance[from][to] = distance[from][intermediate] + distance[intermediate][to];
+            updated.add(from * n + to);
+          }
+        }
+      }
+      steps.add(
+          distanceMatrixStep(
+              "Allow vertex " + intermediate + " as an intermediate",
+              distance,
+              updated.isEmpty() ? 3 : 5,
+              updated,
+              compared,
+              Map.of(
+                  "Intermediate k",
+                  intermediate,
+                  "Updated cells",
+                  updated.size(),
+                  "Negative cycle",
+                  expected.negativeCycle() ? 1 : 0),
+              "Compared row and column for k=" + intermediate));
+    }
+    String path = selectedPath(expected, query.source, query.target);
+    if (!steps.isEmpty()) {
+      long[][] verified = expected.distance();
+      steps.add(
+          distanceMatrixStep(
+              expected.negativeCycle()
+                  ? "Negative cycle detected on the matrix diagonal"
+                  : "Reconstruct selected path " + query.source + " → " + query.target,
+              verified,
+              expected.negativeCycle() ? 6 : 7,
+              Set.of(query.source * n + query.target),
+              Set.of(),
+              Map.of("Negative cycle", expected.negativeCycle() ? 1 : 0),
+              "Next matrix: " + Arrays.deepToString(expected.next()) + "\n" + path));
+    }
+    return new AlgorithmRun(steps, path);
+  }
+
+  private static AlgorithmRun johnsonFrames(
+      GraphQuery query, GraphAlgorithms.AllPairsShortestPaths result) {
+    List<String> phases =
+        List.of(
+            "Add a zero-edge super-source",
+            "Run Bellman–Ford",
+            "Compute vertex potentials",
+            "Reweight edges to non-negative costs",
+            "Run Dijkstra from every source",
+            "Restore original distances");
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (int phase = 0; phase < phases.size(); phase++)
+      steps.add(
+          distanceMatrixStep(
+              phases.get(phase),
+              result.distance(),
+              phase,
+              phase == phases.size() - 1
+                  ? Set.of(query.source * query.graph.vertices() + query.target)
+                  : Set.of(),
+              Set.of(),
+              Map.of(
+                  "Phase",
+                  phase + 1,
+                  "Dijkstra runs",
+                  phase >= 4 ? query.graph.vertices() : 0,
+                  "Negative cycle",
+                  result.negativeCycle() ? 1 : 0),
+              phase == phases.size() - 1
+                  ? selectedPath(result, query.source, query.target)
+                  : "Major phase " + (phase + 1) + " of " + phases.size()));
+    return new AlgorithmRun(steps, selectedPath(result, query.source, query.target));
+  }
+
+  static AlgorithmRun graphAStar(String input) {
+    GraphQuery query = graphQuery(input, true, false);
+    List<GraphAlgorithms.Point> coordinates = new ArrayList<>();
+    for (int vertex = 0; vertex < query.graph.vertices(); vertex++) {
+      double angle = 2 * Math.PI * vertex / Math.max(1, query.graph.vertices());
+      coordinates.add(new GraphAlgorithms.Point(.4 * Math.cos(angle), .4 * Math.sin(angle)));
+    }
+    var search = GraphAlgorithms.aStar(query.graph, coordinates, 0, query.target);
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (GraphAlgorithms.AStarFrame frame : search.frames()) {
+      int current = frame.current();
+      steps.add(
+          graphStep(
+              "Expand vertex " + current,
+              query.graph,
+              Set.of(current),
+              frame.open(),
+              frame.closed(),
+              Map.of(
+                  "gScore",
+                  frame.gScore()[current],
+                  "hScore",
+                  frame.hScore()[current],
+                  "fScore",
+                  frame.fScore()[current],
+                  "Open set",
+                  frame.open().size(),
+                  "Closed set",
+                  frame.closed().size()),
+              "Open: "
+                  + frame.open()
+                  + "\nClosed: "
+                  + frame.closed()
+                  + "\nPath: "
+                  + search.path()));
+    }
+    String summary =
+        search.found()
+            ? "Path " + search.path() + "; cost " + search.cost()
+            : "No path from 0 to " + query.target;
+    return new AlgorithmRun(steps, summary);
+  }
+
+  private static AlgorithmStep distanceMatrixStep(
+      String message,
+      long[][] distance,
+      int activeLine,
+      Set<Integer> active,
+      Set<Integer> compared,
+      Map<String, Number> statistics,
+      String details) {
+    List<String> cells = new ArrayList<>();
+    for (long[] row : distance)
+      for (long value : row) cells.add(value >= GraphAlgorithms.INF ? "∞" : Long.toString(value));
+    return new AlgorithmStep(
+        message,
+        "initialize matrix\n"
+            + "choose intermediate or phase\n"
+            + "compare candidate routes\n"
+            + "update distance and reconstruction data",
+        activeLine,
+        TABLE,
+        List.of(),
+        cells,
+        active,
+        compared,
+        Set.of(),
+        List.of(),
+        statistics,
+        details + "\ncolumns=" + distance.length);
+  }
+
+  private static GraphQuery graphQuery(
+      String input, boolean directed, boolean sourceAndTargetRequired) {
+    String[] parts = input.split(";", 2);
+    if (parts.length != 2)
+      throw new IllegalArgumentException(
+          sourceAndTargetRequired ? "Use edges ; source,target" : "Use edges ; target");
+    GraphAlgorithms.Graph graph = parseGraph(parts[0], directed);
+    int[] selection = numbers(parts[1]);
+    int source = sourceAndTargetRequired && selection.length > 0 ? selection[0] : 0;
+    int target =
+        sourceAndTargetRequired && selection.length > 1
+            ? selection[1]
+            : selection.length > 0 ? selection[0] : -1;
+    if (target < 0
+        || source < 0
+        || target >= graph.vertices()
+        || source >= graph.vertices()
+        || sourceAndTargetRequired && selection.length != 2
+        || !sourceAndTargetRequired && selection.length != 1)
+      throw new IllegalArgumentException("Selected source/target is outside the graph");
+    return new GraphQuery(graph, source, target);
+  }
+
+  private static String selectedPath(
+      GraphAlgorithms.AllPairsShortestPaths result, int source, int target) {
+    if (result.negativeCycle()) return "Negative cycle detected; shortest paths are undefined";
+    List<Integer> path = result.path(source, target);
+    return path.isEmpty()
+        ? "No path from " + source + " to " + target
+        : "Path " + path + "; cost " + result.distance()[source][target];
+  }
+
+  private record GraphQuery(GraphAlgorithms.Graph graph, int source, int target) {}
 
   static AlgorithmRun maxFlow(String ignored) {
     int[][] c = {

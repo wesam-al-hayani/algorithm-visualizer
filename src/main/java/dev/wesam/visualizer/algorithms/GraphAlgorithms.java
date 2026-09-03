@@ -64,6 +64,70 @@ public final class GraphAlgorithms {
     }
   }
 
+  public record AllPairsShortestPaths(long[][] distance, int[][] next, boolean negativeCycle) {
+    public AllPairsShortestPaths {
+      distance = copy(distance);
+      next = copy(next);
+    }
+
+    public List<Integer> path(int source, int target) {
+      if (negativeCycle
+          || source < 0
+          || target < 0
+          || source >= next.length
+          || target >= next.length
+          || next[source][target] < 0) return List.of();
+      List<Integer> path = new ArrayList<>();
+      path.add(source);
+      int current = source;
+      while (current != target && path.size() <= next.length) {
+        current = next[current][target];
+        if (current < 0) return List.of();
+        path.add(current);
+      }
+      return current == target ? List.copyOf(path) : List.of();
+    }
+  }
+
+  public record Point(double x, double y) {}
+
+  public record AStarFrame(
+      int current,
+      long[] gScore,
+      double[] hScore,
+      double[] fScore,
+      Set<Integer> open,
+      Set<Integer> closed) {
+    public AStarFrame {
+      gScore = gScore.clone();
+      hScore = hScore.clone();
+      fScore = fScore.clone();
+      open = Set.copyOf(open);
+      closed = Set.copyOf(closed);
+    }
+  }
+
+  public record AStarResult(
+      List<Integer> path,
+      long cost,
+      long[] gScore,
+      double[] hScore,
+      double[] fScore,
+      int expanded,
+      List<AStarFrame> frames) {
+    public AStarResult {
+      path = List.copyOf(path);
+      gScore = gScore.clone();
+      hScore = hScore.clone();
+      fScore = fScore.clone();
+      frames = List.copyOf(frames);
+    }
+
+    public boolean found() {
+      return cost < INF;
+    }
+  }
+
   public static List<Integer> bfs(Graph graph, int start) {
     checkVertex(graph, start);
     List<List<Edge>> adj = graph.adjacency();
@@ -235,6 +299,180 @@ public final class GraphAlgorithms {
     return new ShortestPaths(distance, parent, negativeCycle);
   }
 
+  public static AllPairsShortestPaths floydWarshall(Graph graph) {
+    int n = graph.vertices;
+    long[][] distance = new long[n][n];
+    int[][] next = new int[n][n];
+    for (int i = 0; i < n; i++) {
+      Arrays.fill(distance[i], INF);
+      Arrays.fill(next[i], -1);
+      distance[i][i] = 0;
+      next[i][i] = i;
+    }
+    for (Edge edge : expandedEdges(graph))
+      if (edge.weight < distance[edge.from][edge.to]) {
+        distance[edge.from][edge.to] = edge.weight;
+        next[edge.from][edge.to] = edge.to;
+      }
+    for (int intermediate = 0; intermediate < n; intermediate++)
+      for (int from = 0; from < n; from++)
+        for (int to = 0; to < n; to++)
+          if (distance[from][intermediate] < INF
+              && distance[intermediate][to] < INF
+              && distance[from][to] > distance[from][intermediate] + distance[intermediate][to]) {
+            distance[from][to] = distance[from][intermediate] + distance[intermediate][to];
+            next[from][to] = next[from][intermediate];
+          }
+    boolean negativeCycle = false;
+    for (int vertex = 0; vertex < n; vertex++)
+      if (distance[vertex][vertex] < 0) negativeCycle = true;
+    return new AllPairsShortestPaths(distance, next, negativeCycle);
+  }
+
+  /** Johnson's sparse all-pairs algorithm using Bellman-Ford potentials and repeated Dijkstra. */
+  public static AllPairsShortestPaths johnson(Graph graph) {
+    int n = graph.vertices;
+    List<Edge> original = expandedEdges(graph);
+    List<Edge> augmented = new ArrayList<>(original);
+    for (int vertex = 0; vertex < n; vertex++) augmented.add(new Edge(n, vertex, 0));
+    ShortestPaths potentials = bellmanFord(new Graph(n + 1, augmented, true), n);
+    if (potentials.negativeCycle()) {
+      long[][] distance = new long[n][n];
+      int[][] next = new int[n][n];
+      for (int i = 0; i < n; i++) {
+        Arrays.fill(distance[i], INF);
+        Arrays.fill(next[i], -1);
+      }
+      return new AllPairsShortestPaths(distance, next, true);
+    }
+
+    List<List<Edge>> adjacency = new ArrayList<>();
+    for (int vertex = 0; vertex < n; vertex++) adjacency.add(new ArrayList<>());
+    for (Edge edge : original) adjacency.get(edge.from).add(edge);
+    long[][] distance = new long[n][n];
+    int[][] next = new int[n][n];
+    for (int source = 0; source < n; source++) {
+      Arrays.fill(distance[source], INF);
+      Arrays.fill(next[source], -1);
+      DijkstraRow row = dijkstraReweighted(adjacency, potentials.distance(), source);
+      for (int target = 0; target < n; target++) {
+        if (row.distance[target] >= INF) continue;
+        distance[source][target] =
+            row.distance[target] - potentials.distance()[source] + potentials.distance()[target];
+        if (source == target) next[source][target] = source;
+        else {
+          int first = target;
+          while (row.parent[first] != -1 && row.parent[first] != source) first = row.parent[first];
+          if (row.parent[first] == source) next[source][target] = first;
+        }
+      }
+    }
+    return new AllPairsShortestPaths(distance, next, false);
+  }
+
+  private static DijkstraRow dijkstraReweighted(
+      List<List<Edge>> adjacency, long[] potential, int source) {
+    long[] distance = new long[adjacency.size()];
+    Arrays.fill(distance, INF);
+    distance[source] = 0;
+    int[] parent = new int[adjacency.size()];
+    Arrays.fill(parent, -1);
+    PriorityQueue<NodeDistance> queue =
+        new PriorityQueue<>(Comparator.comparingLong(NodeDistance::distance));
+    queue.add(new NodeDistance(source, 0));
+    while (!queue.isEmpty()) {
+      NodeDistance item = queue.remove();
+      if (item.distance != distance[item.node]) continue;
+      for (Edge edge : adjacency.get(item.node)) {
+        long weight = edge.weight + potential[edge.from] - potential[edge.to];
+        long candidate = item.distance + weight;
+        if (candidate < distance[edge.to]) {
+          distance[edge.to] = candidate;
+          parent[edge.to] = edge.from;
+          queue.add(new NodeDistance(edge.to, candidate));
+        }
+      }
+    }
+    return new DijkstraRow(distance, parent);
+  }
+
+  /** A* for a weighted graph. Euclidean distance between supplied coordinates is the heuristic. */
+  public static AStarResult aStar(Graph graph, List<Point> coordinates, int source, int target) {
+    checkVertex(graph, source);
+    checkVertex(graph, target);
+    if (coordinates.size() != graph.vertices)
+      throw new IllegalArgumentException("one coordinate is required for every vertex");
+    for (Edge edge : graph.edges)
+      if (edge.weight < 0) throw new IllegalArgumentException("A* requires non-negative weights");
+
+    long[] gScore = new long[graph.vertices];
+    double[] hScore = new double[graph.vertices];
+    double[] fScore = new double[graph.vertices];
+    int[] parent = new int[graph.vertices];
+    boolean[] open = new boolean[graph.vertices];
+    boolean[] closed = new boolean[graph.vertices];
+    Arrays.fill(gScore, INF);
+    Arrays.fill(fScore, Double.POSITIVE_INFINITY);
+    Arrays.fill(parent, -1);
+    for (int vertex = 0; vertex < graph.vertices; vertex++)
+      hScore[vertex] = euclidean(coordinates.get(vertex), coordinates.get(target));
+    gScore[source] = 0;
+    fScore[source] = hScore[source];
+    open[source] = true;
+    PriorityQueue<AStarQueueNode> queue =
+        new PriorityQueue<>(Comparator.comparingDouble(AStarQueueNode::score));
+    queue.add(new AStarQueueNode(source, fScore[source]));
+    List<AStarFrame> frames = new ArrayList<>();
+    List<List<Edge>> adjacency = graph.adjacency();
+    int expanded = 0;
+    while (!queue.isEmpty()) {
+      AStarQueueNode item = queue.remove();
+      int current = item.node;
+      if (closed[current] || item.score > fScore[current]) continue;
+      open[current] = false;
+      closed[current] = true;
+      expanded++;
+      if (current != target) {
+        for (Edge edge : adjacency.get(current)) {
+          long candidate = gScore[current] + edge.weight;
+          if (candidate < gScore[edge.to]) {
+            parent[edge.to] = current;
+            gScore[edge.to] = candidate;
+            fScore[edge.to] = candidate + hScore[edge.to];
+            closed[edge.to] = false;
+            open[edge.to] = true;
+            queue.add(new AStarQueueNode(edge.to, fScore[edge.to]));
+          }
+        }
+      }
+      frames.add(new AStarFrame(current, gScore, hScore, fScore, indexes(open), indexes(closed)));
+      if (current == target) break;
+    }
+    List<Integer> path =
+        gScore[target] >= INF ? List.of() : reconstructPath(parent, source, target);
+    return new AStarResult(path, gScore[target], gScore, hScore, fScore, expanded, frames);
+  }
+
+  private static double euclidean(Point first, Point second) {
+    return Math.hypot(first.x - second.x, first.y - second.y);
+  }
+
+  private static Set<Integer> indexes(boolean[] flags) {
+    Set<Integer> result = new LinkedHashSet<>();
+    for (int i = 0; i < flags.length; i++) if (flags[i]) result.add(i);
+    return result;
+  }
+
+  private static List<Integer> reconstructPath(int[] parent, int source, int target) {
+    List<Integer> path = new ArrayList<>();
+    for (int current = target; current != -1; current = parent[current]) {
+      path.add(current);
+      if (current == source) break;
+    }
+    Collections.reverse(path);
+    return path.isEmpty() || path.get(0) != source ? List.of() : List.copyOf(path);
+  }
+
   public static MstResult kruskal(Graph graph) {
     requireUndirected(graph);
     List<Edge> sorted = new ArrayList<>(graph.edges);
@@ -367,6 +605,22 @@ public final class GraphAlgorithms {
   }
 
   private record NodeDistance(int node, long distance) {}
+
+  private record DijkstraRow(long[] distance, int[] parent) {}
+
+  private record AStarQueueNode(int node, double score) {}
+
+  private static long[][] copy(long[][] source) {
+    long[][] result = new long[source.length][];
+    for (int i = 0; i < source.length; i++) result[i] = source[i].clone();
+    return result;
+  }
+
+  private static int[][] copy(int[][] source) {
+    int[][] result = new int[source.length][];
+    for (int i = 0; i < source.length; i++) result[i] = source[i].clone();
+    return result;
+  }
 
   private static List<Edge> expandedEdges(Graph graph) {
     if (graph.directed) return graph.edges;

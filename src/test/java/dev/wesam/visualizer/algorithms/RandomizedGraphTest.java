@@ -25,11 +25,39 @@ class RandomizedGraphTest {
           if (from != to && random.nextDouble() < .24)
             edges.add(new Edge(from, to, 1 + random.nextInt(30)));
       Graph graph = new Graph(vertices, edges, true);
-      for (int source = 0; source < vertices; source++)
+      AllPairsShortestPaths floyd = floydWarshall(graph);
+      AllPairsShortestPaths johnson = johnson(graph);
+      assertFalse(floyd.negativeCycle());
+      assertFalse(johnson.negativeCycle());
+      for (int source = 0; source < vertices; source++) {
         assertArrayEquals(
             bellmanFord(graph, source).distance(),
             dijkstra(graph, source).distance(),
             "trial " + trial + ", source " + source);
+        assertArrayEquals(dijkstra(graph, source).distance(), floyd.distance()[source]);
+        assertArrayEquals(floyd.distance()[source], johnson.distance()[source]);
+      }
+    }
+  }
+
+  @Test
+  void randomizedNegativeAcyclicGraphsCrossValidateAllPairsAlgorithms() {
+    Random random = new Random(0xA11FA1);
+    for (int trial = 0; trial < 100; trial++) {
+      int vertices = 2 + random.nextInt(10);
+      List<Edge> edges = new ArrayList<>();
+      for (int from = 0; from < vertices; from++)
+        for (int to = from + 1; to < vertices; to++)
+          if (random.nextDouble() < .35) edges.add(new Edge(from, to, random.nextInt(16) - 5));
+      Graph graph = new Graph(vertices, edges, true);
+      AllPairsShortestPaths floyd = floydWarshall(graph);
+      AllPairsShortestPaths johnson = johnson(graph);
+      assertFalse(floyd.negativeCycle());
+      assertFalse(johnson.negativeCycle());
+      for (int source = 0; source < vertices; source++) {
+        assertArrayEquals(bellmanFord(graph, source).distance(), floyd.distance()[source]);
+        assertArrayEquals(floyd.distance()[source], johnson.distance()[source]);
+      }
     }
   }
 
@@ -111,6 +139,17 @@ class RandomizedGraphTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> dijkstra(new Graph(2, List.of(new Edge(0, 1, -1)), true), 0));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> aStar(new Graph(2, List.of(new Edge(0, 1)), true), List.of(new Point(0, 0)), 0, 1));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            aStar(
+                new Graph(2, List.of(new Edge(0, 1, -1)), true),
+                List.of(new Point(0, 0), new Point(1, 0)),
+                0,
+                1));
     assertThrows(
         IllegalArgumentException.class,
         () ->

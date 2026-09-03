@@ -49,14 +49,18 @@ Algorithm Lab V2.0 — Phase 5: advanced graph algorithms
 - [x] Add persistent Insert/Search/Delete/Clear/Random Tree controls for BST, AVL, Red-Black, and B-Tree
 - [x] Keep the current tree, operation count, repair events, and invariant statistics visible after every operation
 - [x] Fix re-entrant Favorites/Recently Viewed navigation uncovered by the packaged UI smoke test
+- [x] Add Floyd-Warshall distance/next matrices, selected-path reconstruction, and negative-cycle detection
+- [x] Add Johnson's Algorithm with Bellman-Ford potentials, edge reweighting, and repeated Dijkstra
+- [x] Add weighted-graph A* with Euclidean heuristic plus g/h/f and open/closed trace frames
+- [x] Cross-validate all-pairs results on random nonnegative graphs and negative-edge DAGs
 
 ## Last Completed Task
 
-Phase 4 tree labs: persistent controls for all four trees, verified in the packaged application
+Phase 5 shortest paths: Floyd-Warshall, Johnson, and weighted-graph A* with randomized cross-validation
 
 ## Current Task
 
-Implement Floyd-Warshall, Johnson's Algorithm, graph A*, Tarjan SCC, bridges, articulation points, Euler path/circuit, bipartite check, and Hopcroft-Karp.
+Implement Tarjan SCC, bridges, articulation points, Euler path/circuit, bipartite check, and Hopcroft-Karp with trace data and cross-validation.
 
 ## Next Task
 
@@ -97,6 +101,9 @@ Implement mandatory Dinic flow, visualize it, and cross-validate it against Edmo
 - Phase 4 final JaCoCo core branch coverage: 87.69% (1,311 / 1,495 branches)
 - Phase 4 `./mvnw --batch-mode -DskipTests package`: PASS
 - Phase 4 packaged UI smoke test: recent-item navigation; BST lab; AVL insert/search/delete/clear/random; Red-Black deletion and repair events; B-Tree deletion and merge events: PASS
+- Phase 5 shortest paths `./mvnw --batch-mode clean test`: PASS (159 JUnit invocations; 65 catalog demos)
+- Phase 5 shortest paths JaCoCo core line coverage: 98.35% (2,201 / 2,238 lines); required minimum: 80%
+- Phase 5 shortest paths JaCoCo core branch coverage: 87.71% (1,413 / 1,611 branches)
 
 ## Known Problems
 
@@ -110,4 +117,4 @@ Implement mandatory Dinic flow, visualize it, and cross-validate it against Edmo
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 4 persistent tree-lab checkpoint ready to commit
+- Pending commits: Phase 5 shortest-path checkpoint ready to commit

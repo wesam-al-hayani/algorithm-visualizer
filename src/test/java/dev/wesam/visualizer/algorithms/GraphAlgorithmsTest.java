@@ -66,6 +66,57 @@ class GraphAlgorithmsTest {
   }
 
   @Test
+  void allPairsAlgorithmsReconstructPathsAndDetectNegativeCycles() {
+    Graph graph =
+        new Graph(
+            4,
+            List.of(
+                new Edge(0, 1, 1),
+                new Edge(0, 2, 4),
+                new Edge(1, 2, -2),
+                new Edge(1, 3, 5),
+                new Edge(2, 3, 2),
+                new Edge(3, 0, 3)),
+            true);
+    AllPairsShortestPaths floyd = floydWarshall(graph);
+    AllPairsShortestPaths johnson = johnson(graph);
+    assertFalse(floyd.negativeCycle());
+    assertFalse(johnson.negativeCycle());
+    for (int row = 0; row < graph.vertices(); row++)
+      assertArrayEquals(floyd.distance()[row], johnson.distance()[row]);
+    assertEquals(List.of(0, 1, 2, 3), floyd.path(0, 3));
+    assertEquals(List.of(0, 1, 2, 3), johnson.path(0, 3));
+    assertTrue(floyd.path(-1, 3).isEmpty());
+
+    Graph cycle =
+        new Graph(3, List.of(new Edge(0, 1, 1), new Edge(1, 2, -3), new Edge(2, 0, 1)), true);
+    assertTrue(floydWarshall(cycle).negativeCycle());
+    assertTrue(johnson(cycle).negativeCycle());
+    assertTrue(floydWarshall(cycle).path(0, 2).isEmpty());
+  }
+
+  @Test
+  void graphAStarUsesEuclideanScoresAndReconstructsThePath() {
+    Graph graph =
+        new Graph(
+            5,
+            List.of(new Edge(0, 1, 1), new Edge(1, 3, 1), new Edge(0, 2, 2), new Edge(2, 3, 2)),
+            true);
+    List<Point> points =
+        List.of(
+            new Point(0, 0), new Point(1, 0), new Point(0, 1), new Point(2, 0), new Point(9, 9));
+    AStarResult found = aStar(graph, points, 0, 3);
+    assertTrue(found.found());
+    assertEquals(2, found.cost());
+    assertEquals(List.of(0, 1, 3), found.path());
+    assertEquals(3, found.frames().get(found.frames().size() - 1).current());
+    assertEquals(2.0, found.hScore()[0], 1e-9);
+    AStarResult missing = aStar(graph, points, 0, 4);
+    assertFalse(missing.found());
+    assertTrue(missing.path().isEmpty());
+  }
+
+  @Test
   void minimumSpanningTreesHaveExpectedWeight() {
     Graph graph =
         new Graph(
