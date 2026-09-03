@@ -71,7 +71,9 @@ public final class VisualizationCanvas extends Region {
 
     private void drawTree(GraphicsContext g,double w,double h){
         List<Integer>a=step.values();if(a.isEmpty()){drawCentered(g,w,h,"Empty structure");return;}int levels=32-Integer.numberOfLeadingZeros(a.size());double top=52;
-        for(int i=0;i<a.size();i++){int level=31-Integer.numberOfLeadingZeros(i+1),first=(1<<level)-1,pos=i-first,count=1<<level;double x=(pos+1)*w/(count+1),y=top+level*Math.min(90,(h-100)/Math.max(1,levels-1));if(i>0){int p=(i-1)/2,pLevel=31-Integer.numberOfLeadingZeros(p+1),pFirst=(1<<pLevel)-1,pPos=p-pFirst,pCount=1<<pLevel;double px=(pPos+1)*w/(pCount+1),py=top+pLevel*Math.min(90,(h-100)/Math.max(1,levels-1));g.setStroke(Color.web("#52627b"));g.setLineWidth(2);g.strokeLine(px,py,x,y);}g.setFill(color(i));g.fillOval(x-22,y-22,44,44);g.setFill(Color.web("#0b1220"));g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font("System",FontWeight.BOLD,12));g.fillText(Integer.toString(a.get(i)),x,y+4);}
+        boolean heap=step.details().contains("Array representation");double treeHeight=heap?h-185:h-100;
+        for(int i=0;i<a.size();i++){int level=31-Integer.numberOfLeadingZeros(i+1),first=(1<<level)-1,pos=i-first,count=1<<level;double x=(pos+1)*w/(count+1),y=top+level*Math.min(90,treeHeight/Math.max(1,levels-1));if(i>0){int p=(i-1)/2,pLevel=31-Integer.numberOfLeadingZeros(p+1),pFirst=(1<<pLevel)-1,pPos=p-pFirst,pCount=1<<pLevel;double px=(pPos+1)*w/(pCount+1),py=top+pLevel*Math.min(90,treeHeight/Math.max(1,levels-1));g.setStroke(Color.web("#52627b"));g.setLineWidth(2);g.strokeLine(px,py,x,y);}g.setFill(treeColor(i));g.fillOval(x-22,y-22,44,44);g.setStroke(Color.web("#dbe7fa"));g.strokeOval(x-22,y-22,44,44);g.setFill(step.details().contains("red-black")&&step.complete().contains(i)?Color.WHITE:Color.web("#0b1220"));g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font("System",FontWeight.BOLD,12));g.fillText(Integer.toString(a.get(i)),x,y+4);}
+        if(heap)drawHeapArray(g,w,h,a);
     }
 
     private void drawGrid(GraphicsContext g,double w,double h){
@@ -86,10 +88,13 @@ public final class VisualizationCanvas extends Region {
     }
 
     private void drawTiles(GraphicsContext g,double w,double h){
-        List<String>items=step.labels();if(items.isEmpty()){drawCentered(g,w,h,step.details());return;}double tile=Math.min(70,(w-40)/Math.max(1,Math.min(items.size(),12))),gap=7,total=items.size()*tile+(items.size()-1)*gap,left=Math.max(20,(w-total)/2),y=h/2-30;g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font("System",FontWeight.SEMI_BOLD,14));for(int i=0;i<items.size();i++){double x=left+i*(tile+gap);g.setFill(color(i));g.fillRoundRect(x,y,tile,60,10,10);g.setFill(TEXT);g.fillText(items.get(i),x+tile/2,y+36);}
+        List<String>items=step.labels();if(items.isEmpty()){drawCentered(g,w,h,step.details());return;}int columns=Math.min(12,items.size()),rows=(int)Math.ceil(items.size()/(double)columns);double gap=7,tile=Math.min(70,(w-40-gap*(columns-1))/columns),total=columns*tile+(columns-1)*gap,left=(w-total)/2,top=(h-rows*67)/2;g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font("System",FontWeight.SEMI_BOLD,14));for(int i=0;i<items.size();i++){double x=left+(i%columns)*(tile+gap),y=top+(i/columns)*67;g.setFill(color(i));g.fillRoundRect(x,y,tile,60,10,10);g.setFill(TEXT);g.fillText(items.get(i),x+tile/2,y+36);}
     }
+
+    private void drawHeapArray(GraphicsContext g,double w,double h,List<Integer>values){double cell=Math.min(46,(w-50)/Math.max(1,values.size())),left=(w-cell*values.size())/2,top=h-62;g.setFont(Font.font(11));g.setTextAlign(TextAlignment.CENTER);for(int i=0;i<values.size();i++){g.setFill(color(i));g.fillRoundRect(left+i*cell+2,top,cell-4,36,5,5);g.setFill(TEXT);g.fillText(Integer.toString(values.get(i)),left+(i+.5)*cell,top+22);g.setFill(Color.web("#75859c"));g.fillText(Integer.toString(i),left+(i+.5)*cell,top+50);}}
 
     private int columnsFromDetails(){String marker="columns=";int at=step.details().lastIndexOf(marker);if(at<0){if(step.kind()==AlgorithmStep.VisualKind.GRID&&step.details().contains("×")){try{return Integer.parseInt(step.details().split("×")[1].trim().split(" ")[0]);}catch(Exception ignored){}}return 0;}try{return Integer.parseInt(step.details().substring(at+marker.length()).trim().split("\\D")[0]);}catch(Exception ignored){return 0;}}
     private Color color(int index){if(step.active().contains(index))return ACTIVE;if(step.secondary().contains(index))return SECONDARY;if(step.complete().contains(index))return COMPLETE;return NORMAL;}
+    private Color treeColor(int index){if(!step.details().contains("red-black"))return color(index);if(step.active().contains(index))return ACTIVE;if(step.secondary().contains(index))return Color.web("#ef6262");if(step.complete().contains(index))return Color.web("#111827");return NORMAL;}
     private void drawCentered(GraphicsContext g,double w,double h,String text){g.setFill(TEXT);g.setTextAlign(TextAlignment.CENTER);g.setFont(Font.font("System",16));g.fillText(text==null?"":text,w/2,h/2,Math.max(0,w-60));}
 }

@@ -2,6 +2,8 @@ package dev.wesam.visualizer.structures;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 /** Textbook red-black tree with insertion, search, rotations, and recoloring. */
 public final class RedBlackTree {
@@ -56,6 +58,12 @@ public final class RedBlackTree {
 
     public List<Integer> inorder() { List<Integer> out=new ArrayList<>(); inorder(root,out); return out; }
     private void inorder(Node n,List<Integer> out){if(n!=nil){inorder(n.left,out);out.add(n.key);inorder(n.right,out);}}
+    public record NodeView(int key, Color color) { }
+    public List<NodeView> levelOrder(){
+        List<NodeView> out=new ArrayList<>();if(root==nil)return out;Queue<Node> queue=new ArrayDeque<>();queue.add(root);
+        while(!queue.isEmpty()){Node node=queue.remove();out.add(new NodeView(node.key,node.color));if(node.left!=nil)queue.add(node.left);if(node.right!=nil)queue.add(node.right);}
+        return out;
+    }
 
     /** Verifies root color, ordering, red-parent, and equal black-height properties. */
     public boolean invariantsHold() { return root==nil || root.color==Color.BLACK && validate(root,Long.MIN_VALUE,Long.MAX_VALUE)>0; }
@@ -68,4 +76,3 @@ public final class RedBlackTree {
         return left+(n.color==Color.BLACK?1:0);
     }
 }
-
