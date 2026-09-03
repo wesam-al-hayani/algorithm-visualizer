@@ -162,4 +162,50 @@ class RandomizedStructureTest {
       }
     }
   }
+
+  @Test
+  void randomizedBTreeInsertDeleteMatchesTreeSetAndExercisesEveryRepair() {
+    Random random = new Random(0xB7DE1E7E);
+    boolean[] eventsSeen = new boolean[7];
+    for (int degree : new int[] {2, 3, 4, 6}) {
+      for (int trial = 0; trial < 24; trial++) {
+        BTree tree = new BTree(degree);
+        TreeSet<Integer> expected = new TreeSet<>();
+        for (int operation = 0; operation < 220; operation++) {
+          int value = random.nextInt(1001) - 500;
+          if (random.nextDouble() < .6) assertEquals(expected.add(value), tree.insert(value));
+          else assertEquals(expected.remove(value), tree.delete(value));
+          recordBTreeEvents(tree, eventsSeen);
+          assertEquals(new ArrayList<>(expected), tree.inOrder());
+          assertTrue(tree.invariantsHold());
+        }
+        for (int value : random.ints(120, -700, 701).toArray()) {
+          assertEquals(expected.add(value), tree.insert(value));
+          assertTrue(tree.invariantsHold());
+        }
+        List<Integer> deletionOrder = new ArrayList<>(expected);
+        java.util.Collections.shuffle(deletionOrder, random);
+        for (int value : deletionOrder) {
+          assertTrue(tree.delete(value));
+          expected.remove(value);
+          recordBTreeEvents(tree, eventsSeen);
+          assertEquals(new ArrayList<>(expected), tree.inOrder());
+          assertTrue(tree.invariantsHold());
+        }
+      }
+    }
+    assertArrayEquals(new boolean[] {true, true, true, true, true, true, true}, eventsSeen);
+  }
+
+  private static void recordBTreeEvents(BTree tree, boolean[] seen) {
+    for (String event : tree.lastEvents()) {
+      if (event.startsWith("Delete")) seen[0] = true;
+      if (event.contains("internal") && event.contains("predecessor")) seen[1] = true;
+      if (event.contains("internal") && event.contains("successor")) seen[2] = true;
+      if (event.startsWith("Borrow from left")) seen[3] = true;
+      if (event.startsWith("Borrow from right")) seen[4] = true;
+      if (event.startsWith("Merge")) seen[5] = true;
+      if (event.startsWith("Root shrinks")) seen[6] = true;
+    }
+  }
 }

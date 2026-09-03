@@ -81,4 +81,23 @@ class TreeTest {
     assertFalse(tree.contains(31));
     assertTrue(tree.splits() > 0);
   }
+
+  @Test
+  void bTreeDeletesFromLeavesAndInternalNodesThenShrinksRoot() {
+    BTree tree = new BTree(2);
+    for (int value = 1; value <= 30; value++) assertTrue(tree.insert(value));
+    for (int value : new int[] {6, 13, 7, 4, 2, 16, 20, 12}) {
+      assertTrue(tree.delete(value));
+      assertFalse(tree.contains(value));
+      assertTrue(tree.invariantsHold(), "after deleting " + value);
+    }
+    assertFalse(tree.delete(100));
+    for (int value : List.copyOf(tree.inOrder())) {
+      assertTrue(tree.delete(value));
+      assertTrue(tree.invariantsHold());
+    }
+    assertTrue(tree.root().leaf);
+    assertTrue(tree.root().keys.isEmpty());
+    assertTrue(tree.merges() > 0);
+  }
 }

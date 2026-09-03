@@ -43,14 +43,17 @@ Algorithm Lab V2.0 — Phase 4: balanced trees and persistent structure labs
 - [x] Implement Red-Black Tree deletion with successor replacement and double-black repair
 - [x] Expose recoloring, rotations, and all four sibling repair cases to the visualizer
 - [x] Validate Red-Black parent links and run 20,000 randomized mixed operations across every repair case
+- [x] Implement textbook B-Tree deletion for leaves and internal nodes
+- [x] Expose predecessor/successor replacement, left/right borrowing, merging, and root shrinking
+- [x] Verify B-Tree insert/delete invariants across minimum degrees 2, 3, 4, and 6
 
 ## Last Completed Task
 
-Red-Black Tree deletion: full double-black repair visualization and randomized invariant verification
+B-Tree deletion: full borrow/merge/root-shrink visualization and randomized invariant verification
 
 ## Current Task
 
-Implement textbook B-Tree deletion, expose leaf/internal/borrow/merge/root-shrink events, and verify randomized insert/delete sequences.
+Add persistent on-screen Insert/Search/Delete/Clear/Random controls for BST, AVL, Red-Black, and B-Tree labs.
 
 ## Next Task
 
@@ -83,11 +86,13 @@ Complete the remaining advanced graph algorithms, including mandatory Dinic maxi
 - Red-Black deletion `./mvnw --batch-mode clean test`: PASS (153 JUnit invocations)
 - Red-Black deletion JaCoCo core line coverage: 98.06% (1,916 / 1,954 lines); required minimum: 80%
 - Red-Black deletion JaCoCo core branch coverage: 87.27% (1,241 / 1,422 branches)
+- B-Tree deletion `./mvnw --batch-mode clean test`: PASS (155 JUnit invocations)
+- B-Tree deletion JaCoCo core line coverage: 98.19% (2,006 / 2,043 lines); required minimum: 80%
+- B-Tree deletion JaCoCo core branch coverage: 87.67% (1,294 / 1,476 branches)
 
 ## Known Problems
 
 - Maven is not installed globally; the tested `./mvnw` launcher handles it.
-- B-Tree deletion remains a V1 limitation and is the current mandatory V2 task.
 - V2 implementation is in progress; `main` must not be merged until all mandatory V2 work is verified.
 
 ## GitHub
@@ -97,4 +102,4 @@ Complete the remaining advanced graph algorithms, including mandatory Dinic maxi
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Red-Black Tree deletion checkpoint ready to commit
+- Pending commits: B-Tree deletion checkpoint ready to commit

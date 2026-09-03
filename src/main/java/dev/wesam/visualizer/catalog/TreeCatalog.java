@@ -82,12 +82,20 @@ final class TreeCatalog {
         demo(
             "Trees",
             "B-Tree",
-            "Multi-key balanced tree insertion splits full nodes on the descent.",
-            "if root full, split it\ndescend toward key\nsplit any full child before entering",
+            "A multi-key balanced tree splits on insertion and borrows or merges before deletion"
+                + " descents.",
+            "search keys in the current node\n"
+                + "for insertion, split a full child before descent\n"
+                + "for leaf deletion, remove the key\n"
+                + "for internal deletion, use predecessor or successor\n"
+                + "before descending, ensure the child has at least t keys\n"
+                + "borrow from an adjacent sibling when possible\n"
+                + "otherwise merge siblings with their separator\n"
+                + "shrink an empty internal root",
             "O(log n)",
             "O(log n)",
-            "Keys to insert (minimum degree 2)",
-            "10,20,5,6,12,30,7,17,3,4",
+            "Keys; optional ?search or -delete (minimum degree 2)",
+            "10,20,5,6,12,30,7,17,3,4,?17,-6,-10",
             TreeCatalog::bTree));
     return List.copyOf(demos);
   }
@@ -291,23 +299,68 @@ final class TreeCatalog {
   static AlgorithmRun bTree(String input) {
     BTree tree = new BTree(2);
     List<AlgorithmStep> s = new ArrayList<>();
-    for (int key : numbersLimited(input, 100, "B-tree")) {
-      tree.insert(key);
+    String result = "B-Tree is empty";
+    String[] operations = input.split(",");
+    if (operations.length > 100)
+      throw new IllegalArgumentException("B-Tree visualization is limited to 100 operations");
+    for (String raw : operations) {
+      String token = raw.trim();
+      int key;
+      int activeLine;
+      if (token.startsWith("?")) {
+        key = Integer.parseInt(token.substring(1));
+        result = "Search " + key + ": " + tree.contains(key);
+        activeLine = 0;
+      } else if (token.startsWith("-")) {
+        key = Integer.parseInt(token.substring(1));
+        boolean deleted = tree.delete(key);
+        result = deleted ? "Deleted " + key : "Key " + key + " not found";
+        if (tree.lastEvents().stream().anyMatch(event -> event.startsWith("Borrow")))
+          activeLine = 5;
+        else if (tree.lastEvents().stream().anyMatch(event -> event.startsWith("Merge")))
+          activeLine = 6;
+        else if (tree.lastEvents().stream().anyMatch(event -> event.startsWith("Replace")))
+          activeLine = 3;
+        else activeLine = 2;
+      } else {
+        key = Integer.parseInt(token);
+        boolean inserted = tree.insert(key);
+        result = inserted ? "Inserted " + key : "Key " + key + " already present";
+        activeLine = 1;
+      }
       s.add(
           new AlgorithmStep(
-              "Insert " + key + (tree.splits() > 0 ? "; split full nodes as required" : ""),
-              "split full root\ndescend and split full child\ninsert key in leaf",
-              1,
+              result,
+              "search keys in the current node\n"
+                  + "for insertion, split a full child before descent\n"
+                  + "for leaf deletion, remove the key\n"
+                  + "for internal deletion, use predecessor or successor\n"
+                  + "before descending, ensure the child has at least t keys\n"
+                  + "borrow from an adjacent sibling when possible\n"
+                  + "otherwise merge siblings with their separator\n"
+                  + "shrink an empty internal root",
+              activeLine,
               TREE,
               tree.inOrder(),
               List.of(),
-              Set.of(key),
+              tree.contains(key) ? Set.of(tree.inOrder().indexOf(key)) : Set.of(),
               Set.of(),
               Set.of(),
               List.of(),
-              Map.of("Keys", tree.inOrder().size(), "Splits", tree.splits()),
-              "Balanced invariants: " + tree.invariantsHold()));
+              Map.of(
+                  "Keys",
+                  tree.inOrder().size(),
+                  "Splits",
+                  tree.splits(),
+                  "Borrows",
+                  tree.borrows(),
+                  "Merges",
+                  tree.merges()),
+              "Events: "
+                  + (tree.lastEvents().isEmpty() ? "none" : String.join("; ", tree.lastEvents()))
+                  + "\nBalanced invariants: "
+                  + tree.invariantsHold()));
     }
-    return new AlgorithmRun(s, "Sorted keys: " + tree.inOrder());
+    return new AlgorithmRun(s, result + "; sorted keys " + tree.inOrder());
   }
 }

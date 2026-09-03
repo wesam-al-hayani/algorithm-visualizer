@@ -3,7 +3,7 @@ package dev.wesam.visualizer.structures;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Educational B-tree insertion/search implementation with configurable minimum degree. */
+/** Textbook B-tree supporting insertion, search, and deletion at configurable minimum degree. */
 public final class BTree {
   public static final class Node {
     public final List<Integer> keys = new ArrayList<>();
@@ -18,6 +18,9 @@ public final class BTree {
   private final int degree;
   private Node root = new Node(true);
   private int splits;
+  private int borrows;
+  private int merges;
+  private final List<String> lastEvents = new ArrayList<>();
 
   public BTree(int minimumDegree) {
     if (minimumDegree < 2) throw new IllegalArgumentException("minimum degree must be at least 2");
@@ -32,6 +35,18 @@ public final class BTree {
     return splits;
   }
 
+  public int borrows() {
+    return borrows;
+  }
+
+  public int merges() {
+    return merges;
+  }
+
+  public List<String> lastEvents() {
+    return List.copyOf(lastEvents);
+  }
+
   public boolean contains(int key) {
     return contains(root, key);
   }
@@ -44,12 +59,17 @@ public final class BTree {
   }
 
   public boolean insert(int key) {
-    if (contains(key)) return false;
+    lastEvents.clear();
+    if (contains(key)) {
+      lastEvents.add("Key " + key + " is already present");
+      return false;
+    }
     if (root.keys.size() == 2 * degree - 1) {
       Node newRoot = new Node(false);
       newRoot.children.add(root);
       splitChild(newRoot, 0);
       root = newRoot;
+      lastEvents.add("Split full root");
     }
     insertNonFull(root, key);
     return true;
@@ -87,6 +107,116 @@ public final class BTree {
     parent.keys.add(childIndex, median);
     parent.children.add(childIndex + 1, right);
     splits++;
+    lastEvents.add("Split full child around median " + median);
+  }
+
+  public boolean delete(int key) {
+    lastEvents.clear();
+    if (!contains(key)) {
+      lastEvents.add("Key " + key + " was not found");
+      return false;
+    }
+    delete(root, key);
+    if (!root.leaf && root.keys.isEmpty()) {
+      root = root.children.get(0);
+      lastEvents.add("Root shrinks to its only child");
+    }
+    return true;
+  }
+
+  private void delete(Node node, int key) {
+    int index = firstAtLeast(node, key);
+    if (index < node.keys.size() && node.keys.get(index) == key) {
+      if (node.leaf) {
+        node.keys.remove(index);
+        lastEvents.add("Delete " + key + " from leaf");
+      } else {
+        deleteFromInternal(node, index);
+      }
+      return;
+    }
+
+    boolean wasLastChild = index == node.keys.size();
+    if (node.children.get(index).keys.size() == degree - 1) fill(node, index);
+    if (wasLastChild && index > node.keys.size()) index--;
+    delete(node.children.get(index), key);
+  }
+
+  private void deleteFromInternal(Node node, int index) {
+    int key = node.keys.get(index);
+    Node left = node.children.get(index);
+    Node right = node.children.get(index + 1);
+    if (left.keys.size() >= degree) {
+      int predecessor = predecessor(left);
+      node.keys.set(index, predecessor);
+      lastEvents.add("Replace internal key " + key + " with predecessor " + predecessor);
+      delete(left, predecessor);
+    } else if (right.keys.size() >= degree) {
+      int successor = successor(right);
+      node.keys.set(index, successor);
+      lastEvents.add("Replace internal key " + key + " with successor " + successor);
+      delete(right, successor);
+    } else {
+      merge(node, index);
+      delete(left, key);
+    }
+  }
+
+  private void fill(Node parent, int childIndex) {
+    if (childIndex > 0 && parent.children.get(childIndex - 1).keys.size() >= degree)
+      borrowFromPrevious(parent, childIndex);
+    else if (childIndex < parent.keys.size()
+        && parent.children.get(childIndex + 1).keys.size() >= degree)
+      borrowFromNext(parent, childIndex);
+    else if (childIndex < parent.keys.size()) merge(parent, childIndex);
+    else merge(parent, childIndex - 1);
+  }
+
+  private void borrowFromPrevious(Node parent, int childIndex) {
+    Node child = parent.children.get(childIndex);
+    Node sibling = parent.children.get(childIndex - 1);
+    child.keys.add(0, parent.keys.get(childIndex - 1));
+    if (!child.leaf) child.children.add(0, sibling.children.remove(sibling.children.size() - 1));
+    parent.keys.set(childIndex - 1, sibling.keys.remove(sibling.keys.size() - 1));
+    borrows++;
+    lastEvents.add("Borrow from left sibling before descent");
+  }
+
+  private void borrowFromNext(Node parent, int childIndex) {
+    Node child = parent.children.get(childIndex);
+    Node sibling = parent.children.get(childIndex + 1);
+    child.keys.add(parent.keys.get(childIndex));
+    if (!child.leaf) child.children.add(sibling.children.remove(0));
+    parent.keys.set(childIndex, sibling.keys.remove(0));
+    borrows++;
+    lastEvents.add("Borrow from right sibling before descent");
+  }
+
+  private void merge(Node parent, int keyIndex) {
+    Node left = parent.children.get(keyIndex);
+    Node right = parent.children.remove(keyIndex + 1);
+    int separator = parent.keys.remove(keyIndex);
+    left.keys.add(separator);
+    left.keys.addAll(right.keys);
+    if (!left.leaf) left.children.addAll(right.children);
+    merges++;
+    lastEvents.add("Merge siblings around separator " + separator);
+  }
+
+  private static int firstAtLeast(Node node, int key) {
+    int index = 0;
+    while (index < node.keys.size() && node.keys.get(index) < key) index++;
+    return index;
+  }
+
+  private static int predecessor(Node node) {
+    while (!node.leaf) node = node.children.get(node.keys.size());
+    return node.keys.get(node.keys.size() - 1);
+  }
+
+  private static int successor(Node node) {
+    while (!node.leaf) node = node.children.get(0);
+    return node.keys.get(0);
   }
 
   public List<Integer> inOrder() {
@@ -109,7 +239,9 @@ public final class BTree {
 
   private boolean validate(
       Node n, boolean isRoot, int depth, int[] leafDepth, long low, long high) {
-    if (!isRoot && (n.keys.size() < degree - 1 || n.keys.size() > 2 * degree - 1)) return false;
+    if (n.keys.size() > 2 * degree - 1) return false;
+    if (isRoot && !n.leaf && n.keys.isEmpty()) return false;
+    if (!isRoot && n.keys.size() < degree - 1) return false;
     for (int i = 0; i < n.keys.size(); i++) {
       int key = n.keys.get(i);
       if (key <= low || key >= high || (i > 0 && n.keys.get(i - 1) >= key)) return false;
