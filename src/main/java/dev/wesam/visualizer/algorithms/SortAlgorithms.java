@@ -194,23 +194,20 @@ public final class SortAlgorithms {
 
   private static void radixSort(int[] a, Recorder r) {
     if (a.length == 0) return;
-    int min = Arrays.stream(a).min().orElse(0);
-    int offset = min < 0 ? -min : 0;
-    int max = 0;
-    for (int value : a) max = Math.max(max, value + offset);
     int[] output = new int[a.length];
-    for (long exp = 1; max / exp > 0; exp *= 10) {
-      int[] counts = new int[10];
-      for (int value : a) counts[(int) ((value + (long) offset) / exp % 10)]++;
-      for (int i = 1; i < 10; i++) counts[i] += counts[i - 1];
+    // Flipping the sign bit maps signed integer order to unsigned order.
+    for (int shift = 0; shift < Integer.SIZE; shift += Byte.SIZE) {
+      int[] counts = new int[256];
+      for (int value : a) counts[((value ^ Integer.MIN_VALUE) >>> shift) & 0xff]++;
+      for (int i = 1; i < counts.length; i++) counts[i] += counts[i - 1];
       for (int i = a.length - 1; i >= 0; i--) {
-        int digit = (int) ((a[i] + (long) offset) / exp % 10);
+        int digit = ((a[i] ^ Integer.MIN_VALUE) >>> shift) & 0xff;
         output[--counts[digit]] = a[i];
       }
       System.arraycopy(output, 0, a, 0, a.length);
       r.writes += a.length;
-      r.frame("Stable sort by digit position " + exp, range(a.length), Set.of(), Set.of(), 1);
-      if (exp > Integer.MAX_VALUE / 10L) break;
+      r.frame(
+          "Stable sort by byte " + (shift / Byte.SIZE + 1), range(a.length), Set.of(), Set.of(), 1);
     }
   }
 

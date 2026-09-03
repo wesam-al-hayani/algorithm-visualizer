@@ -10,7 +10,7 @@ class AlgorithmCatalogTest {
   @Test
   void catalogCoversAllCategoriesAndEveryDefaultRunWorks() {
     var catalog = AlgorithmCatalog.create();
-    assertTrue(catalog.size() >= 55, "broad algorithm coverage");
+    assertEquals(61, catalog.size(), "every documented demo must remain wired");
     Set<String> categories =
         catalog.stream().map(AlgorithmDemo::category).collect(Collectors.toSet());
     assertEquals(

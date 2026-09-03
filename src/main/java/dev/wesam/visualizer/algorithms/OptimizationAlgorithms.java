@@ -211,8 +211,8 @@ public final class OptimizationAlgorithms {
   }
 
   public static VertexCoverResult exactVertexCover(int vertices, List<GraphAlgorithms.Edge> edges) {
-    if (vertices > 24 || vertices < 0)
-      throw new IllegalArgumentException("exact cover is limited to 24 vertices");
+    if (vertices > 18 || vertices < 0)
+      throw new IllegalArgumentException("exact cover is limited to 18 vertices");
     long limit = 1L << vertices;
     for (int size = 0; size <= vertices; size++)
       for (long mask = 0; mask < limit; mask++)
@@ -251,8 +251,8 @@ public final class OptimizationAlgorithms {
   }
 
   public static CutResult exactMaxCut(int vertices, List<GraphAlgorithms.Edge> edges) {
-    if (vertices < 1 || vertices > 24)
-      throw new IllegalArgumentException("exact cut is limited to 24 vertices");
+    if (vertices < 1 || vertices > 20)
+      throw new IllegalArgumentException("exact cut is limited to 20 vertices");
     long bestMask = 0, bestWeight = Long.MIN_VALUE, limit = 1L << (vertices - 1);
     for (long mask = 0; mask < limit; mask++) {
       long fullMask = mask << 1, weight = 0;
@@ -272,8 +272,8 @@ public final class OptimizationAlgorithms {
 
   /** Literals are encoded as ±(variable index + 1). */
   public static MaxSatResult exactMaxSat(int variables, List<int[]> clauses) {
-    if (variables < 0 || variables > 24)
-      throw new IllegalArgumentException("MaxSAT is limited to 24 variables");
+    if (variables < 0 || variables > 20)
+      throw new IllegalArgumentException("MaxSAT is limited to 20 variables");
     int best = -1;
     long bestMask = 0, limit = 1L << variables;
     for (long mask = 0; mask < limit; mask++) {

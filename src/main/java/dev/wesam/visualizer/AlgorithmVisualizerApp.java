@@ -419,10 +419,12 @@ public final class AlgorithmVisualizerApp extends Application {
       input.setText(csv(values) + " ; " + values[random.nextInt(values.length)]);
     } else if (name.equals("Quickselect") || name.equals("Median of Medians")) {
       input.setText(randomCsv(random, 11) + " ; " + random.nextInt(11));
-    } else if (demo.category().equals("Strings & Hashing") && name.contains("Probing")
-        || name.equals("Separate Chaining")
-        || name.equals("Double Hashing")) {
-      input.setText(randomCsv(random, 9) + ",?" + (random.nextInt(70) + 1));
+    } else if (demo.category().equals("Strings & Hashing")
+        && (name.contains("Probing")
+            || name.equals("Separate Chaining")
+            || name.equals("Double Hashing"))) {
+      int[] keys = positiveRandomValues(random, 9);
+      input.setText(csv(keys) + ",?" + keys[random.nextInt(keys.length)]);
     } else if (name.contains("Knapsack")) {
       input.setText("2,3,4,5,6 ; 3,5,6,8,9 ; 12");
     } else if (name.startsWith("Grid ")) {
@@ -436,6 +438,12 @@ public final class AlgorithmVisualizerApp extends Application {
   private int[] randomValues(Random random, int count) {
     int[] values = new int[count];
     for (int i = 0; i < count; i++) values[i] = random.nextInt(91) - 20;
+    return values;
+  }
+
+  private int[] positiveRandomValues(Random random, int count) {
+    int[] values = new int[count];
+    for (int i = 0; i < count; i++) values[i] = random.nextInt(90) + 1;
     return values;
   }
 

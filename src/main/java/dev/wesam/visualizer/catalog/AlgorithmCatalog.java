@@ -46,7 +46,7 @@ public final class AlgorithmCatalog {
               kind == SortAlgorithms.Kind.MERGE ? "O(n)" : "O(1)–O(n)",
               "Comma-separated integers",
               "38,12,27,6,19,44,3,31",
-              input -> SortAlgorithms.visualize(numbers(input), kind)));
+              input -> SortAlgorithms.visualize(numbersLimited(input, 80, "sorting"), kind)));
     }
     demos.add(
         demo(
@@ -666,6 +666,9 @@ public final class AlgorithmCatalog {
     String[] p = input.split(";", 2);
     if (p.length < 2) throw new IllegalArgumentException("Use: text ; pattern");
     String text = p[0].trim(), pattern = p[1].trim();
+    if (text.length() > 500 || pattern.length() > 100)
+      throw new IllegalArgumentException(
+          "String visualization is limited to 500 text and 100 pattern characters");
     List<Integer> matches =
         switch (method) {
           case "naive" -> StringAlgorithms.naive(text, pattern);
@@ -699,7 +702,10 @@ public final class AlgorithmCatalog {
     EducationalHashTable table = new EducationalHashTable(11, strategy);
     List<AlgorithmStep> s = new ArrayList<>();
     int collisions = 0;
-    for (String raw : input.split(",")) {
+    String[] operations = input.split(",");
+    if (operations.length > 100)
+      throw new IllegalArgumentException("Hash visualization is limited to 100 operations");
+    for (String raw : operations) {
       String token = raw.trim();
       if (token.isEmpty()) continue;
       EducationalHashTable.OperationResult r;
@@ -911,6 +917,8 @@ public final class AlgorithmCatalog {
   private static AlgorithmRun grid(String input, GridPathfinding.Method method) {
     String[] rows = input.trim().split("/");
     if (rows.length == 0) throw new IllegalArgumentException("empty grid");
+    if ((long) rows.length * rows[0].length() > 2_500)
+      throw new IllegalArgumentException("Grid visualization is limited to 2,500 cells");
     boolean[][] walls = new boolean[rows.length][rows[0].length()];
     GridPathfinding.Cell start = null, target = null;
     for (int r = 0; r < rows.length; r++) {
@@ -979,7 +987,7 @@ public final class AlgorithmCatalog {
   }
 
   private static AlgorithmRun treeTraversal(String input, String traversal) {
-    BinarySearchTree tree = makeBst(numbers(input));
+    BinarySearchTree tree = makeBst(numbersLimited(input, 100, "tree"));
     List<Integer> order =
         switch (traversal) {
           case "Preorder" -> tree.preorder();
@@ -994,7 +1002,10 @@ public final class AlgorithmCatalog {
     BinarySearchTree tree = new BinarySearchTree();
     List<AlgorithmStep> s = new ArrayList<>();
     String result = "";
-    for (String raw : input.split(",")) {
+    String[] operations = input.split(",");
+    if (operations.length > 100)
+      throw new IllegalArgumentException("Tree visualization is limited to 100 operations");
+    for (String raw : operations) {
       String t = raw.trim();
       if (t.startsWith("?")) {
         int key = Integer.parseInt(t.substring(1));
@@ -1036,7 +1047,7 @@ public final class AlgorithmCatalog {
   private static AlgorithmRun redBlack(String input) {
     RedBlackTree tree = new RedBlackTree();
     List<AlgorithmStep> s = new ArrayList<>();
-    for (int key : numbers(input)) {
+    for (int key : numbersLimited(input, 100, "red-black tree")) {
       tree.insert(key);
       List<RedBlackTree.NodeView> nodes = tree.levelOrder();
       List<Integer> values = nodes.stream().map(RedBlackTree.NodeView::key).toList();
@@ -1067,7 +1078,7 @@ public final class AlgorithmCatalog {
   private static AlgorithmRun bTree(String input) {
     BTree tree = new BTree(2);
     List<AlgorithmStep> s = new ArrayList<>();
-    for (int key : numbers(input)) {
+    for (int key : numbersLimited(input, 100, "B-tree")) {
       tree.insert(key);
       s.add(
           new AlgorithmStep(
@@ -1090,7 +1101,7 @@ public final class AlgorithmCatalog {
   private static AlgorithmRun binaryHeap(String input, BinaryHeap.Type type, boolean drain) {
     BinaryHeap heap = new BinaryHeap(type);
     List<AlgorithmStep> s = new ArrayList<>();
-    int[] source = numbers(input);
+    int[] source = numbersLimited(input, 100, "heap");
     if (type == BinaryHeap.Type.MAX && !drain) {
       heap.heapify(Arrays.stream(source).boxed().toList());
       s.add(
@@ -1140,7 +1151,7 @@ public final class AlgorithmCatalog {
   private static AlgorithmRun binomialHeap(String input) {
     BinomialHeap heap = new BinomialHeap();
     List<AlgorithmStep> s = new ArrayList<>();
-    for (int v : numbers(input)) {
+    for (int v : numbersLimited(input, 100, "binomial heap")) {
       heap.insert(v);
       s.add(
           treeStep(
@@ -1165,7 +1176,7 @@ public final class AlgorithmCatalog {
     FibonacciHeap heap = new FibonacciHeap();
     List<AlgorithmStep> s = new ArrayList<>();
     FibonacciHeap.Node decrease = null;
-    for (int v : numbers(input)) {
+    for (int v : numbersLimited(input, 100, "Fibonacci heap")) {
       FibonacciHeap.Node node = heap.insert(v);
       if (decrease == null) decrease = node;
       s.add(
@@ -1203,6 +1214,9 @@ public final class AlgorithmCatalog {
     if (p.length != 3) throw new IllegalArgumentException("Use weights ; values ; capacity");
     int[] w = numbers(p[0]), v = numbers(p[1]);
     int c = Integer.parseInt(p[2].trim());
+    if (w.length > 100 || c > 500)
+      throw new IllegalArgumentException(
+          "Knapsack visualization is limited to 100 items and capacity 500");
     var r = OptimizationAlgorithms.knapsack(w, v, c);
     List<AlgorithmStep> s = new ArrayList<>();
     for (int item = 1; item < r.table().length; item++)
@@ -1220,9 +1234,12 @@ public final class AlgorithmCatalog {
   private static AlgorithmRun branchBound(String input) {
     String[] p = input.split(";");
     if (p.length != 3) throw new IllegalArgumentException("Use weights ; values ; capacity");
+    int[] weights = numbers(p[0]);
+    if (weights.length > 20)
+      throw new IllegalArgumentException("Branch-and-bound visualization is limited to 20 items");
     var r =
         OptimizationAlgorithms.branchAndBoundKnapsack(
-            numbers(p[0]), numbers(p[1]), Integer.parseInt(p[2].trim()));
+            weights, numbers(p[1]), Integer.parseInt(p[2].trim()));
     return new AlgorithmRun(
         List.of(
             AlgorithmStep.text(
@@ -1234,6 +1251,10 @@ public final class AlgorithmCatalog {
 
   private static AlgorithmRun tsp(String input, boolean brute) {
     int[][] d = matrix(input);
+    int limit = brute ? 9 : 12;
+    if (d.length > limit)
+      throw new IllegalArgumentException(
+          "This TSP visualization is limited to " + limit + " cities");
     var r = brute ? OptimizationAlgorithms.bruteForceTsp(d) : OptimizationAlgorithms.heldKarp(d);
     GraphAlgorithms.Graph g = completeGraph(d);
     List<AlgorithmStep> s = new ArrayList<>();
@@ -1306,7 +1327,7 @@ public final class AlgorithmCatalog {
       for (int x : c) variables = Math.max(variables, Math.abs(x));
       clauses.add(c);
     }
-    if (variables > 20) throw new IllegalArgumentException("UI MaxSAT limit is 20 variables");
+    if (variables > 18) throw new IllegalArgumentException("UI MaxSAT limit is 18 variables");
     var r = OptimizationAlgorithms.exactMaxSat(variables, clauses);
     List<String> labels = new ArrayList<>();
     for (int i = 0; i < variables; i++) labels.add("x" + (i + 1) + " = " + r.assignment()[i]);
@@ -1632,6 +1653,8 @@ public final class AlgorithmCatalog {
       max = Math.max(max, Math.max(a, b));
       edges.add(new GraphAlgorithms.Edge(a, b, w));
     }
+    if (max >= 60)
+      throw new IllegalArgumentException("Graph visualization is limited to 60 vertices");
     return new GraphAlgorithms.Graph(max + 1, edges, directed);
   }
 
@@ -1679,6 +1702,14 @@ public final class AlgorithmCatalog {
     String[] parts = clean.split("[ ,]+");
     int[] result = new int[parts.length];
     for (int i = 0; i < parts.length; i++) result[i] = Integer.parseInt(parts[i].trim());
+    return result;
+  }
+
+  private static int[] numbersLimited(String input, int limit, String subject) {
+    int[] result = numbers(input);
+    if (result.length > limit)
+      throw new IllegalArgumentException(
+          "The " + subject + " visualization is limited to " + limit + " values");
     return result;
   }
 

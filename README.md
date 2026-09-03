@@ -2,7 +2,7 @@
 
 A broad, step-driven JavaFX study tool for algorithms and data structures covered in TU Dortmund's DAP1, DAP2, and Efficient Algorithms courses. It is designed as a readable university portfolio project: algorithm logic is independent from JavaFX, every visible demo runs real code, and the UI exposes the state that changes during execution.
 
-The application contains **57 interactive demonstrations** across nine sections. It is intentionally much more than a sorting visualizer.
+The application contains **61 interactive demonstrations** across nine sections. It is intentionally much more than a sorting visualizer.
 
 ## Highlights
 
@@ -96,7 +96,7 @@ The detailed implementation/visualization/test matrix is in [docs/ALGORITHM_COVE
 src/main/java/dev/wesam/visualizer/
 ├── algorithms/    # UI-independent algorithm implementations
 ├── structures/    # Trees and heaps with invariant checks
-├── catalog/       # 57 demos and their logical visualization steps
+├── catalog/       # 61 demos and their logical visualization steps
 ├── model/         # Immutable AlgorithmStep / AlgorithmRun records
 ├── ui/            # Responsive canvas renderer
 └── AlgorithmVisualizerApp.java
@@ -117,8 +117,8 @@ The helper stages changes, commits them, and pushes the current branch. If the p
 
 ## Design Notes and Limits
 
-- TSP dynamic programming is limited to 18 cities; brute-force TSP to 10.
-- Exact Vertex Cover, Max Cut, and core MaxSAT are limited to 24 variables/vertices; the UI keeps MaxSAT at 20.
+- TSP core dynamic programming supports 18 cities and brute force supports 10; the responsive UI uses safer limits of 12 and 9 respectively.
+- Exact Vertex Cover is limited to 18 vertices, while Max Cut and core MaxSAT are limited to 20; the UI keeps MaxSAT at 18.
 - Counting Sort rejects impractically large key ranges.
 - Red-Black Tree deletion and B-Tree deletion are intentionally omitted; insertion/search and all structural invariants are implemented and tested.
 - Visualizations favor understandable logical steps over micro-animation.
@@ -126,4 +126,3 @@ The helper stages changes, commits them, and pushes the current branch. If the p
 ## Technology
 
 Java 17 language level, JavaFX 21, Maven, and JUnit 5. There are no application libraries beyond JavaFX; the implementations use the Java standard library.
-

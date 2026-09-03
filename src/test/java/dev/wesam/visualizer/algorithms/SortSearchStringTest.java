@@ -20,6 +20,14 @@ class SortSearchStringTest {
   }
 
   @Test
+  void radixSortHandlesTheEntireSignedIntegerRange() {
+    assertArrayEquals(
+        new int[] {Integer.MIN_VALUE, -1, 0, 1, Integer.MAX_VALUE},
+        SortAlgorithms.sort(
+            new int[] {Integer.MAX_VALUE, 0, Integer.MIN_VALUE, -1, 1}, SortAlgorithms.Kind.RADIX));
+  }
+
+  @Test
   void searchesFoundMissingAndBoundaries() {
     int[] values = {2, 4, 6, 8, 10};
     assertEquals(0, SearchAlgorithms.linearSearch(values, 2));

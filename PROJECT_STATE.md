@@ -11,7 +11,7 @@ Phase 10 — Final verification and release
 - [x] Create Maven/JavaFX project metadata
 - [x] Add interruption-safe checkpoint script
 - [x] Create JavaFX application shell
-- [x] Implement 57 algorithm/data-structure demonstrations
+- [x] Implement 61 algorithm/data-structure demonstrations
 - [x] Add responsive step-based visualizers and playback controls
 - [x] Add direct grid editing and maze generation
 - [x] Add JUnit correctness, invariant, and catalog coverage tests
@@ -32,8 +32,8 @@ Merge verified release to `main`
 
 ## Tests
 
-- 22 JUnit test methods: PASS
-- Every one of 57 demo default inputs: PASS
+- 23 JUnit test methods: PASS
+- Every one of 61 demo default inputs: PASS
 - Latest `./mvnw test`: PASS
 - `./mvnw clean test`: pending final release run
 
