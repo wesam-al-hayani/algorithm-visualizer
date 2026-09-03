@@ -215,7 +215,7 @@ public final class SortAlgorithms {
 
         private void compare(int a, int b, String message, int line) {
             comparisons++;
-            frame(message, Set.of(a, b), Set.of(), Set.of(), line);
+            frame(message, indexSet(a, b), Set.of(), Set.of(), line);
         }
 
         private void swap(int a, int b, String message, int line) {
@@ -223,7 +223,11 @@ public final class SortAlgorithms {
                 int temp = values[a]; values[a] = values[b]; values[b] = temp;
                 swaps++; writes += 2;
             }
-            frame(message, Set.of(a, b), Set.of(), Set.of(), line);
+            frame(message, indexSet(a, b), Set.of(), Set.of(), line);
+        }
+
+        private Set<Integer> indexSet(int a, int b) {
+            return a == b ? Set.of(a) : Set.of(a, b);
         }
 
         private void frame(String message, Set<Integer> active, Set<Integer> secondary,
@@ -240,4 +244,3 @@ public final class SortAlgorithms {
         }
     }
 }
-
