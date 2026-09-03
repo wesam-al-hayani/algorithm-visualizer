@@ -1,0 +1,7 @@
+<?xml version="1.0" ?>
+<jpackage-state version="21.0.10" platform="macOS">
+  <app-version>1.0.0</app-version>
+  <main-launcher>AlgorithmVisualizer</main-launcher>
+  <main-class>dev.wesam.visualizer.AlgorithmVisualizerApp</main-class>
+  <signed>false</signed>
+  <app-store>false</app-store></jpackage-state>
