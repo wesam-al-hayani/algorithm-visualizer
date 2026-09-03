@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 1: safety and refactoring
+Algorithm Lab V2.0 — Phase 3: educational UI
 
 ## Completed
 
@@ -26,18 +26,23 @@ Algorithm Lab V2.0 — Phase 1: safety and refactoring
 - [x] Extract a UI-independent `PlaybackController` state machine
 - [x] Extract `InputGenerator` and pure `GridEditor` transformations
 - [x] Rewire the JavaFX entry point without changing the step-based playback model
+- [x] Add parameterized and deterministic randomized tests for every V1 core area
+- [x] Add direct tests for playback state, grid editing, and generated inputs
+- [x] Add JaCoCo 0.8.15 with an enforced 80% core line-coverage floor
+- [x] Expand GitHub Actions to Ubuntu, macOS, and Windows
+- [x] Make CI run clean tests, coverage verification, and packaging
 
 ## Last Completed Task
 
-Application responsibility refactor; clean tests and JavaFX startup pass
+V2 test infrastructure: 147 passing invocations and 97.74% measured core line coverage
 
 ## Current Task
 
-Expand randomized/parameterized tests, add direct playback/grid tests, configure JaCoCo, and upgrade GitHub Actions to a multi-OS matrix.
+Upgrade educational UI: real per-algorithm pseudocode, highlighted active lines, search, favorites/recent items, theme switching, shortcuts, and focus mode.
 
 ## Next Task
 
-Upgrade educational UI: algorithm search, highlighted pseudocode, themes, shortcuts, favorites/recent items, and focus mode.
+Implement AVL, Red-Black Tree deletion, B-Tree deletion, and persistent data-structure operations.
 
 ## Tests
 
@@ -51,6 +56,10 @@ Upgrade educational UI: algorithm search, highlighted pseudocode, themes, shortc
 - Catalog refactor `./mvnw --batch-mode test`: PASS (23 tests, 61 catalog demos)
 - Application refactor `./mvnw --batch-mode clean test`: PASS (23 tests)
 - Application refactor `./mvnw javafx:run` startup: PASS
+- Phase 2 `./mvnw --batch-mode clean test`: PASS (147 JUnit invocations)
+- JaCoCo core line coverage: 97.74% (1,641 / 1,679 lines); required minimum: 80%
+- JaCoCo core branch coverage: 87.14% (1,098 / 1,260 branches)
+- Phase 2 `./mvnw --batch-mode -DskipTests package`: PASS
 
 ## Known Problems
 
@@ -65,4 +74,4 @@ Upgrade educational UI: algorithm search, highlighted pseudocode, themes, shortc
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: application responsibility refactor ready to commit
+- Pending commits: Phase 2 test/coverage/CI checkpoint ready to commit

@@ -13,6 +13,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <javafx.version>21.0.8</javafx.version>
         <junit.version>5.13.4</junit.version>
+        <jacoco.version>0.8.15</jacoco.version>
     </properties>
 
     <dependencies>
@@ -53,7 +54,50 @@
                     <launcher>algorithm-visualizer</launcher>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <includes>
+                        <include>dev/wesam/visualizer/algorithms/**</include>
+                        <include>dev/wesam/visualizer/structures/**</include>
+                        <include>dev/wesam/visualizer/ui/PlaybackController*</include>
+                        <include>dev/wesam/visualizer/ui/GridEditor*</include>
+                        <include>dev/wesam/visualizer/ui/InputGenerator*</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-coverage-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report-and-check-core-coverage</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
-
