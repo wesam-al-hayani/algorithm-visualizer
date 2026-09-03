@@ -1,69 +1,121 @@
 package dev.wesam.visualizer.algorithms;
 
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.Set;
-
 import static dev.wesam.visualizer.algorithms.GraphAlgorithms.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+
 class GraphAlgorithmsTest {
-    @Test void traversalsComponentsAndDag() {
-        Graph graph = new Graph(6, List.of(new Edge(0,1), new Edge(0,2), new Edge(1,3), new Edge(4,5)), false);
-        assertEquals(List.of(0,1,2,3), bfs(graph, 0));
-        assertEquals(Set.of(0,1,2,3), Set.copyOf(dfs(graph, 0)));
-        assertEquals(2, connectedComponents(graph).size());
-        Graph dag = new Graph(4, List.of(new Edge(0,1), new Edge(0,2), new Edge(1,3), new Edge(2,3)), true);
-        List<Integer> order = topologicalSort(dag);
-        assertTrue(order.indexOf(0) < order.indexOf(3));
-        assertThrows(IllegalArgumentException.class, () -> topologicalSort(new Graph(2, List.of(new Edge(0,1), new Edge(1,0)), true)));
-    }
+  @Test
+  void traversalsComponentsAndDag() {
+    Graph graph =
+        new Graph(
+            6, List.of(new Edge(0, 1), new Edge(0, 2), new Edge(1, 3), new Edge(4, 5)), false);
+    assertEquals(List.of(0, 1, 2, 3), bfs(graph, 0));
+    assertEquals(Set.of(0, 1, 2, 3), Set.copyOf(dfs(graph, 0)));
+    assertEquals(2, connectedComponents(graph).size());
+    Graph dag =
+        new Graph(4, List.of(new Edge(0, 1), new Edge(0, 2), new Edge(1, 3), new Edge(2, 3)), true);
+    List<Integer> order = topologicalSort(dag);
+    assertTrue(order.indexOf(0) < order.indexOf(3));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> topologicalSort(new Graph(2, List.of(new Edge(0, 1), new Edge(1, 0)), true)));
+  }
 
-    @Test void stronglyConnectedComponentsAreGrouped() {
-        Graph graph = new Graph(5, List.of(new Edge(0,1), new Edge(1,0), new Edge(1,2), new Edge(2,3), new Edge(3,2), new Edge(3,4)), true);
-        List<Set<Integer>> parts = stronglyConnectedComponents(graph);
-        assertTrue(parts.contains(Set.of(0,1)));
-        assertTrue(parts.contains(Set.of(2,3)));
-        assertTrue(parts.contains(Set.of(4)));
-    }
+  @Test
+  void stronglyConnectedComponentsAreGrouped() {
+    Graph graph =
+        new Graph(
+            5,
+            List.of(
+                new Edge(0, 1),
+                new Edge(1, 0),
+                new Edge(1, 2),
+                new Edge(2, 3),
+                new Edge(3, 2),
+                new Edge(3, 4)),
+            true);
+    List<Set<Integer>> parts = stronglyConnectedComponents(graph);
+    assertTrue(parts.contains(Set.of(0, 1)));
+    assertTrue(parts.contains(Set.of(2, 3)));
+    assertTrue(parts.contains(Set.of(4)));
+  }
 
-    @Test void shortestPathsHandleDisconnectedAndNegativeEdges() {
-        Graph positive = new Graph(5, List.of(new Edge(0,1,4), new Edge(0,2,1), new Edge(2,1,2), new Edge(1,3,1)), true);
-        ShortestPaths dijkstra = dijkstra(positive, 0);
-        assertArrayEquals(new long[]{0,3,1,4,INF}, dijkstra.distance());
-        assertEquals(List.of(0,2,1,3), dijkstra.pathTo(3));
-        Graph negative = new Graph(4, List.of(new Edge(0,1,4), new Edge(0,2,5), new Edge(1,2,-2), new Edge(2,3,3)), true);
-        assertArrayEquals(new long[]{0,4,2,5}, bellmanFord(negative, 0).distance());
-        Graph cycle = new Graph(3, List.of(new Edge(0,1,1), new Edge(1,2,-2), new Edge(2,1,-2)), true);
-        assertTrue(bellmanFord(cycle, 0).negativeCycle());
-    }
+  @Test
+  void shortestPathsHandleDisconnectedAndNegativeEdges() {
+    Graph positive =
+        new Graph(
+            5,
+            List.of(new Edge(0, 1, 4), new Edge(0, 2, 1), new Edge(2, 1, 2), new Edge(1, 3, 1)),
+            true);
+    ShortestPaths dijkstra = dijkstra(positive, 0);
+    assertArrayEquals(new long[] {0, 3, 1, 4, INF}, dijkstra.distance());
+    assertEquals(List.of(0, 2, 1, 3), dijkstra.pathTo(3));
+    Graph negative =
+        new Graph(
+            4,
+            List.of(new Edge(0, 1, 4), new Edge(0, 2, 5), new Edge(1, 2, -2), new Edge(2, 3, 3)),
+            true);
+    assertArrayEquals(new long[] {0, 4, 2, 5}, bellmanFord(negative, 0).distance());
+    Graph cycle =
+        new Graph(3, List.of(new Edge(0, 1, 1), new Edge(1, 2, -2), new Edge(2, 1, -2)), true);
+    assertTrue(bellmanFord(cycle, 0).negativeCycle());
+  }
 
-    @Test void minimumSpanningTreesHaveExpectedWeight() {
-        Graph graph = new Graph(4, List.of(new Edge(0,1,1), new Edge(0,2,4), new Edge(1,2,2), new Edge(1,3,5), new Edge(2,3,3)), false);
-        assertEquals(6, kruskal(graph).totalWeight());
-        assertEquals(6, prim(graph, 0).totalWeight());
-        assertTrue(kruskal(graph).spanning());
-    }
+  @Test
+  void minimumSpanningTreesHaveExpectedWeight() {
+    Graph graph =
+        new Graph(
+            4,
+            List.of(
+                new Edge(0, 1, 1),
+                new Edge(0, 2, 4),
+                new Edge(1, 2, 2),
+                new Edge(1, 3, 5),
+                new Edge(2, 3, 3)),
+            false);
+    assertEquals(6, kruskal(graph).totalWeight());
+    assertEquals(6, prim(graph, 0).totalWeight());
+    assertTrue(kruskal(graph).spanning());
+  }
 
-    @Test void maxFlowAndMinimumCut() {
-        int[][] capacity = {{0,16,13,0,0,0},{0,0,10,12,0,0},{0,4,0,0,14,0},{0,0,9,0,0,20},{0,0,0,7,0,4},{0,0,0,0,0,0}};
-        FlowResult result = edmondsKarp(capacity, 0, 5);
-        assertEquals(23, result.maximumFlow());
-        assertTrue(result.sourceSideOfMinCut()[0]);
-        assertFalse(result.sourceSideOfMinCut()[5]);
-    }
+  @Test
+  void maxFlowAndMinimumCut() {
+    int[][] capacity = {
+      {0, 16, 13, 0, 0, 0},
+      {0, 0, 10, 12, 0, 0},
+      {0, 4, 0, 0, 14, 0},
+      {0, 0, 9, 0, 0, 20},
+      {0, 0, 0, 7, 0, 4},
+      {0, 0, 0, 0, 0, 0}
+    };
+    FlowResult result = edmondsKarp(capacity, 0, 5);
+    assertEquals(23, result.maximumFlow());
+    assertTrue(result.sourceSideOfMinCut()[0]);
+    assertFalse(result.sourceSideOfMinCut()[5]);
+  }
 
-    @Test void matchingUnionFindAndGridPaths() {
-        boolean[][] bipartite = {{true,true,false},{false,true,false},{false,true,true}};
-        assertEquals(3, maximumBipartiteMatching(bipartite));
-        UnionFind sets = new UnionFind(5); sets.union(0,1); sets.union(1,2);
-        assertTrue(sets.connected(0,2)); assertFalse(sets.connected(0,4));
-        boolean[][] walls = new boolean[4][4]; walls[1][1] = true; walls[1][2] = true;
-        for (GridPathfinding.Method method : GridPathfinding.Method.values()) {
-            GridPathfinding.Result path = GridPathfinding.find(walls, new GridPathfinding.Cell(0,0), new GridPathfinding.Cell(3,3), method);
-            assertEquals(6, path.cost()); assertFalse(path.path().isEmpty());
-        }
+  @Test
+  void matchingUnionFindAndGridPaths() {
+    boolean[][] bipartite = {{true, true, false}, {false, true, false}, {false, true, true}};
+    assertEquals(3, maximumBipartiteMatching(bipartite));
+    UnionFind sets = new UnionFind(5);
+    sets.union(0, 1);
+    sets.union(1, 2);
+    assertTrue(sets.connected(0, 2));
+    assertFalse(sets.connected(0, 4));
+    boolean[][] walls = new boolean[4][4];
+    walls[1][1] = true;
+    walls[1][2] = true;
+    for (GridPathfinding.Method method : GridPathfinding.Method.values()) {
+      GridPathfinding.Result path =
+          GridPathfinding.find(
+              walls, new GridPathfinding.Cell(0, 0), new GridPathfinding.Cell(3, 3), method);
+      assertEquals(6, path.cost());
+      assertFalse(path.path().isEmpty());
     }
+  }
 }
-
