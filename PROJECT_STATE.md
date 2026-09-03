@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Complete — stable release
+Algorithm Lab V2.0 — Phase 1: safety and refactoring
 
 ## Completed
 
@@ -18,18 +18,22 @@ Complete — stable release
 - [x] Add algorithm coverage and project documentation
 - [x] Complete automated and manual verification
 - [x] Verify GitHub Actions on development checkpoints
+- [x] Recover and verify the V1 repository before V2 changes
+- [x] Confirm `main` remains clean at `3685d94cf251eeef236e04a209203dc4ac5f4005`
+- [x] Switch to the existing `codex-work` development branch
+- [x] Re-run the complete V1 test suite as the V2 baseline
 
 ## Last Completed Task
 
-Final manual UI verification and robustness fixes
+V2 recovery audit and clean V1 baseline verification
 
 ## Current Task
 
-Complete
+Split `AlgorithmCatalog` into simple category-specific catalog classes, then extract focused UI responsibilities from `AlgorithmVisualizerApp`.
 
 ## Next Task
 
-None
+Expand randomized/parameterized tests, add JaCoCo, and upgrade GitHub Actions to a multi-OS matrix.
 
 ## Tests
 
@@ -39,15 +43,19 @@ None
 - `./mvnw -DskipTests package`: PASS
 - `./mvnw javafx:run` startup: PASS
 - Manual UI: Start, Pause, Resume, one-step, Reset, Generate, speed, category switching, input-change cancellation, invalid-input alert, graph rendering, grid toolbar, maze generation, dropdown contrast, and resizing: PASS
+- V2 baseline `./mvnw --batch-mode clean test`: PASS (2026-09-03)
 
 ## Known Problems
 
 - Maven is not installed globally; the tested `./mvnw` launcher handles it.
-- Red-Black Tree deletion and B-Tree deletion are intentionally outside the visible feature set, as documented.
+- Red-Black Tree deletion and B-Tree deletion remain V1 limitations and are mandatory V2 work.
+- V2 implementation is in progress; `main` must not be merged until all mandatory V2 work is verified.
 
 ## GitHub
 
 - Repository: `wesam-al-hayani/algorithm-visualizer`
 - Development branch: `codex-work`
 - Last push successful: yes
-- Pending commits: no
+- Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
+- V2 work branch: `codex-work`
+- Pending commits: this file records the first V2 checkpoint
