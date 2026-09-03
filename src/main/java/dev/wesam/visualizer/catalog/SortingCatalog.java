@@ -20,7 +20,7 @@ final class SortingCatalog {
               name
                   + " rearranges values into nondecreasing order. Colored bars show the active"
                   + " comparison, partition, and finished region.",
-              "choose the active range\ncompare keys\nmove or swap values\ngrow the sorted region",
+              SortAlgorithms.pseudocode(kind),
               sortTime(kind),
               kind == SortAlgorithms.Kind.MERGE ? "O(n)" : "O(1)–O(n)",
               "Comma-separated integers",

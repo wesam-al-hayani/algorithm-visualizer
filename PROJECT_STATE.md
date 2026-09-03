@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 3: educational UI
+Algorithm Lab V2.0 — Phase 4: balanced trees and persistent structure labs
 
 ## Completed
 
@@ -31,18 +31,25 @@ Algorithm Lab V2.0 — Phase 3: educational UI
 - [x] Add JaCoCo 0.8.15 with an enforced 80% core line-coverage floor
 - [x] Expand GitHub Actions to Ubuntu, macOS, and Windows
 - [x] Make CI run clean tests, coverage verification, and packaging
+- [x] Replace shared placeholder text with algorithm-specific pseudocode for all 61 demonstrations
+- [x] Highlight the active pseudocode line during playback
+- [x] Add immediate algorithm search across names, categories, and explanations
+- [x] Add persistent favorites and an eight-item recently viewed history
+- [x] Add complete light/dark themes, focus mode, and keyboard shortcuts
+- [x] Add bounded undo/redo history for interactive grid edits
+- [x] Add an About dialog with project and runtime attribution
 
 ## Last Completed Task
 
-V2 test infrastructure: 147 passing invocations and 97.74% measured core line coverage
+V2 educational UI: real pseudocode, active-line highlighting, search, favorites/recent history, themes, shortcuts, focus mode, and grid undo/redo
 
 ## Current Task
 
-Upgrade educational UI: real per-algorithm pseudocode, highlighted active lines, search, favorites/recent items, theme switching, shortcuts, and focus mode.
+Implement AVL operations, Red-Black Tree deletion, B-Tree deletion, invariant tests, and persistent data-structure operations.
 
 ## Next Task
 
-Implement AVL, Red-Black Tree deletion, B-Tree deletion, and persistent data-structure operations.
+Complete the remaining advanced graph algorithms, including mandatory Dinic maximum flow.
 
 ## Tests
 
@@ -60,6 +67,11 @@ Implement AVL, Red-Black Tree deletion, B-Tree deletion, and persistent data-str
 - JaCoCo core line coverage: 97.74% (1,641 / 1,679 lines); required minimum: 80%
 - JaCoCo core branch coverage: 87.14% (1,098 / 1,260 branches)
 - Phase 2 `./mvnw --batch-mode -DskipTests package`: PASS
+- Phase 3 `./mvnw --batch-mode clean test`: PASS (149 JUnit invocations)
+- Phase 3 JaCoCo core line coverage: 97.70% (1,702 / 1,742 lines); required minimum: 80%
+- Phase 3 JaCoCo core branch coverage: 87.29% (1,126 / 1,290 branches)
+- Phase 3 `./mvnw --batch-mode -DskipTests package`: PASS
+- Phase 3 packaged UI smoke test: search, result navigation, favorites, recents, real pseudocode, active-line highlighting, light/dark themes, focus mode, and search/step shortcuts: PASS
 
 ## Known Problems
 
@@ -74,4 +86,4 @@ Implement AVL, Red-Black Tree deletion, B-Tree deletion, and persistent data-str
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 2 test/coverage/CI checkpoint ready to commit
+- Pending commits: Phase 3 educational UI checkpoint ready to commit

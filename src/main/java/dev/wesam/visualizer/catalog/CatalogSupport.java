@@ -28,7 +28,38 @@ final class CatalogSupport {
       String hint,
       String input,
       java.util.function.Function<String, AlgorithmRun> runner) {
-    return new AlgorithmDemo(category, name, explanation, pseudo, time, space, hint, input, runner);
+    return new AlgorithmDemo(
+        category,
+        name,
+        explanation,
+        pseudo,
+        time,
+        space,
+        hint,
+        input,
+        value -> withPseudocode(runner.apply(value), pseudo));
+  }
+
+  private static AlgorithmRun withPseudocode(AlgorithmRun run, String pseudocode) {
+    List<AlgorithmStep> steps =
+        run.steps().stream()
+            .map(
+                step ->
+                    new AlgorithmStep(
+                        step.message(),
+                        pseudocode,
+                        step.activeLine(),
+                        step.kind(),
+                        step.values(),
+                        step.labels(),
+                        step.active(),
+                        step.secondary(),
+                        step.complete(),
+                        step.edges(),
+                        step.statistics(),
+                        step.details()))
+            .toList();
+    return new AlgorithmRun(steps, run.result());
   }
 
   static AlgorithmStep arrayStep(
@@ -168,7 +199,7 @@ final class CatalogSupport {
           new AlgorithmStep(
               "Visit node " + key,
               "visit nodes in traversal order",
-              1,
+              0,
               TREE,
               layout,
               List.of(),

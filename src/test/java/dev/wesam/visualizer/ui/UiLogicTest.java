@@ -8,6 +8,8 @@ import dev.wesam.visualizer.model.AlgorithmStep;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
+import java.util.prefs.Preferences;
 import org.junit.jupiter.api.Test;
 
 class UiLogicTest {
@@ -77,6 +79,44 @@ class UiLogicTest {
       String generated = InputGenerator.generate(demo, demo.defaultInput(), new Random(1234));
       assertNotNull(generated);
       assertDoesNotThrow(() -> demo.runner().apply(generated), demo.name());
+    }
+  }
+
+  @Test
+  void editHistorySupportsBoundedUndoAndRedo() {
+    EditHistory history = new EditHistory();
+    String value = "initial";
+    for (int i = 0; i < 60; i++) value = history.apply(value, "edit-" + i);
+    assertEquals("edit-58", history.undo(value).orElseThrow());
+    assertEquals("edit-59", history.redo("edit-58").orElseThrow());
+    history.clear();
+    assertTrue(history.undo(value).isEmpty());
+    assertTrue(history.redo(value).isEmpty());
+  }
+
+  @Test
+  void favoritesAndRecentAlgorithmsUseStableCatalogIdentifiers() throws Exception {
+    Preferences preferences =
+        Preferences.userRoot().node("algorithm-lab-tests/" + UUID.randomUUID());
+    try {
+      AlgorithmHistory history = new AlgorithmHistory(preferences);
+      var catalog = AlgorithmCatalog.create();
+      var first = catalog.get(0);
+      var second = catalog.get(1);
+      history.setFavorite(first, true);
+      assertTrue(history.isFavorite(first));
+      assertEquals(List.of(first), history.favorites(catalog));
+      history.setFavorite(first, false);
+      assertFalse(history.isFavorite(first));
+
+      history.recordViewed(first);
+      history.recordViewed(second);
+      history.recordViewed(first);
+      assertEquals(List.of(first, second), history.recentlyViewed(catalog));
+      for (int index = 2; index < 14; index++) history.recordViewed(catalog.get(index));
+      assertEquals(8, history.recentlyViewed(catalog).size());
+    } finally {
+      preferences.removeNode();
     }
   }
 

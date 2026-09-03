@@ -31,7 +31,7 @@ public final class SortAlgorithms {
 
   public static SortResult run(int[] input, Kind kind, long seed) {
     int[] values = input.clone();
-    Recorder r = new Recorder(values);
+    Recorder r = new Recorder(values, pseudocode(kind));
     switch (kind) {
       case BUBBLE -> bubble(values, r);
       case SELECTION -> selection(values, r);
@@ -50,6 +50,53 @@ public final class SortAlgorithms {
   public static AlgorithmRun visualize(int[] input, Kind kind) {
     SortResult result = run(input, kind, System.nanoTime());
     return new AlgorithmRun(result.steps(), Arrays.toString(result.values()));
+  }
+
+  public static String pseudocode(Kind kind) {
+    return switch (kind) {
+      case BUBBLE ->
+          "for end from n - 1 down to 1\n"
+              + "  compare each adjacent pair through end\n"
+              + "  if a[i] > a[i + 1], swap them\n"
+              + "  mark a[end] as sorted";
+      case SELECTION ->
+          "for boundary from 0 to n - 1\n"
+              + "  scan the suffix for its minimum\n"
+              + "  swap the minimum with a[boundary]\n"
+              + "  grow the sorted prefix";
+      case INSERTION ->
+          "for each key after the first element\n"
+              + "  compare key with the sorted prefix\n"
+              + "  shift every larger value right\n"
+              + "  write key into the open position";
+      case MERGE ->
+          "mergeSort(left, right)\n"
+              + "  split the range at middle\n"
+              + "  recursively sort both halves\n"
+              + "  merge the two sorted halves";
+      case QUICK, RANDOMIZED_QUICK ->
+          "quickSort(left, right)\n"
+              + "  choose a pivot"
+              + (kind == Kind.RANDOMIZED_QUICK ? " uniformly at random" : " at the right boundary")
+              + "\n  establish the pivot and partition range\n"
+              + "  compare scan value with pivot\n"
+              + "  move smaller values into the left partition\n"
+              + "  place pivot, then recurse on both sides";
+      case HEAP ->
+          "build a max-heap bottom-up\n"
+              + "  sift a violating value down\n"
+              + "swap maximum with the unsorted boundary\n"
+              + "restore heap order in the remaining prefix";
+      case COUNTING ->
+          "find the minimum and maximum keys\n"
+              + "count every key occurrence\n"
+              + "write keys back in increasing order";
+      case RADIX ->
+          "flip each signed key's sign bit conceptually\n"
+              + "for each byte from least to most significant\n"
+              + "  stably counting-sort by that byte\n"
+              + "copy the byte-sorted output back";
+    };
   }
 
   private static void bubble(int[] a, Recorder r) {
@@ -239,11 +286,13 @@ public final class SortAlgorithms {
 
   private static final class Recorder {
     private final int[] values;
+    private final String pseudocode;
     private final List<AlgorithmStep> steps = new ArrayList<>();
     private long comparisons, swaps, writes, maxDepth;
 
-    private Recorder(int[] values) {
+    private Recorder(int[] values, String pseudocode) {
       this.values = values;
+      this.pseudocode = pseudocode;
       frame("Initial array", Set.of(), Set.of(), Set.of(), 0);
     }
 
@@ -281,10 +330,7 @@ public final class SortAlgorithms {
       steps.add(
           new AlgorithmStep(
               message,
-              "1  choose current range / item\n"
-                  + "2  compare or partition\n"
-                  + "3  write or swap\n"
-                  + "4  grow the solved region",
+              pseudocode,
               line,
               AlgorithmStep.VisualKind.ARRAY,
               Arrays.stream(values).boxed().toList(),

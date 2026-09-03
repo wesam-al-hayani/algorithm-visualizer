@@ -1,4 +1,5 @@
 module dev.wesam.visualizer {
+  requires java.prefs;
   requires javafx.controls;
 
   exports dev.wesam.visualizer;

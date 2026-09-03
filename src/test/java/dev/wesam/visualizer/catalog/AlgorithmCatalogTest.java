@@ -29,6 +29,16 @@ class AlgorithmCatalogTest {
       var run = assertDoesNotThrow(() -> demo.runner().apply(demo.defaultInput()), demo.name());
       assertNotNull(run.result(), demo.name());
       assertFalse(run.steps().isEmpty(), demo.name() + " should visualize at least one step");
+      assertFalse(demo.pseudocode().isBlank(), demo.name() + " needs real pseudocode");
+      int lineCount = demo.pseudocode().split("\\R", -1).length;
+      run.steps()
+          .forEach(
+              step -> {
+                assertEquals(demo.pseudocode(), step.pseudocode(), demo.name());
+                assertTrue(
+                    step.activeLine() < lineCount,
+                    demo.name() + " active line " + step.activeLine() + " exceeds pseudocode");
+              });
     }
   }
 }

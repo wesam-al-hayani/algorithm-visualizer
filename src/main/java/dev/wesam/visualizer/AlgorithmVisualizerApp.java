@@ -4,9 +4,12 @@ import dev.wesam.visualizer.catalog.AlgorithmCatalog;
 import dev.wesam.visualizer.catalog.AlgorithmDemo;
 import dev.wesam.visualizer.model.AlgorithmRun;
 import dev.wesam.visualizer.model.AlgorithmStep;
+import dev.wesam.visualizer.ui.AlgorithmHistory;
+import dev.wesam.visualizer.ui.EditHistory;
 import dev.wesam.visualizer.ui.GridEditor;
 import dev.wesam.visualizer.ui.InputGenerator;
 import dev.wesam.visualizer.ui.PlaybackController;
+import dev.wesam.visualizer.ui.PseudocodeView;
 import dev.wesam.visualizer.ui.VisualizationCanvas;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,10 +29,13 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Slider;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -42,11 +48,15 @@ import javafx.util.Duration;
 public final class AlgorithmVisualizerApp extends Application {
   private final List<AlgorithmDemo> catalog = AlgorithmCatalog.create();
   private final ListView<String> categories = new ListView<>();
+  private final TextField algorithmSearch = new TextField();
+  private final ListView<AlgorithmDemo> searchResults = new ListView<>();
+  private final ListView<AlgorithmDemo> favorites = new ListView<>();
+  private final ListView<AlgorithmDemo> recentlyViewed = new ListView<>();
   private final ComboBox<AlgorithmDemo> algorithms = new ComboBox<>();
   private final TextField input = new TextField();
   private final Label inputHint = new Label();
   private final Label explanation = new Label();
-  private final TextArea pseudocode = new TextArea();
+  private final PseudocodeView pseudocode = new PseudocodeView();
   private final FlowPane statistics = new FlowPane(8, 8);
   private final Label operation = new Label("Ready");
   private final Label result = new Label("");
@@ -59,6 +69,9 @@ public final class AlgorithmVisualizerApp extends Application {
       stepButton = new Button("Step"),
       reset = new Button("Reset"),
       generate = new Button("Generate");
+  private final ToggleButton favorite = new ToggleButton("☆ Favorite"),
+      lightTheme = new ToggleButton("☀ Light");
+  private final Button focusView = new Button("Focus View"), about = new Button("About");
   private final ToggleButton drawWalls = new ToggleButton("Draw Walls"),
       setGridStart = new ToggleButton("Set Start"),
       setGridTarget = new ToggleButton("Set Target");
@@ -68,20 +81,29 @@ public final class AlgorithmVisualizerApp extends Application {
   private final HBox gridTools =
       new HBox(8, drawWalls, setGridStart, setGridTarget, clearPath, clearGrid, maze);
   private final PlaybackController playback = new PlaybackController();
+  private final AlgorithmHistory history = new AlgorithmHistory();
+  private final EditHistory editHistory = new EditHistory();
+  private BorderPane root;
+  private Region navigation;
+  private SplitPane workspaceSplit;
+  private ScrollPane informationScroll;
   private Timeline timeline;
+  private boolean updatingFavorite;
 
   @Override
   public void start(Stage stage) {
-    BorderPane root = new BorderPane();
+    root = new BorderPane();
     root.getStyleClass().add("app-root");
     root.setTop(header());
-    root.setLeft(sidebar());
+    navigation = sidebar();
+    root.setLeft(navigation);
     root.setCenter(workspace());
     wireActions();
     categories.getSelectionModel().selectFirst();
     Scene scene = new Scene(root, 1280, 820);
     scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
-    stage.setTitle("Algorithm & Data Structure Visualizer");
+    installKeyboardShortcuts(scene);
+    stage.setTitle("Algorithm Lab — Interactive Algorithms & Data Structures");
     stage.setMinWidth(980);
     stage.setMinHeight(680);
     stage.setScene(scene);
@@ -89,16 +111,14 @@ public final class AlgorithmVisualizerApp extends Application {
   }
 
   private Region header() {
-    Label mark = new Label("AV");
+    Label mark = new Label("AL");
     mark.getStyleClass().add("brand-mark");
     VBox titles =
-        new VBox(new Label("ALGORITHM LAB"), new Label("Algorithm & Data Structure Visualizer"));
+        new VBox(new Label("ALGORITHM LAB"), new Label("Interactive Algorithms & Data Structures"));
     titles.getStyleClass().add("brand-title");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    Label course = new Label("DAP1 · DAP2 · Efficient Algorithms");
-    course.getStyleClass().add("course-pill");
-    HBox box = new HBox(14, mark, titles, spacer, course);
+    HBox box = new HBox(10, mark, titles, spacer, lightTheme, focusView, about);
     box.getStyleClass().add("header");
     return box;
   }
@@ -107,11 +127,32 @@ public final class AlgorithmVisualizerApp extends Application {
     LinkedHashSet<String> names = new LinkedHashSet<>();
     catalog.forEach(d -> names.add(d.category()));
     categories.getItems().setAll(names);
-    categories.setPrefWidth(260);
+    algorithmSearch.setPromptText("Search algorithms…");
+    algorithmSearch.setAccessibleText("Search algorithms by name or category");
+    searchResults.setMaxHeight(170);
+    searchResults.setManaged(false);
+    searchResults.setVisible(false);
+    favorites.setPrefHeight(96);
+    recentlyViewed.setPrefHeight(118);
+    categories.setPrefWidth(270);
+    categories.setPrefHeight(290);
     categories.getStyleClass().add("category-list");
-    Label label = new Label("CATEGORIES");
-    label.getStyleClass().add("eyebrow");
-    VBox box = new VBox(12, label, categories);
+    Label searchLabel = eyebrow("FIND AN ALGORITHM");
+    Label categoryLabel = eyebrow("CATEGORIES");
+    Label favoriteLabel = eyebrow("FAVORITES");
+    Label recentLabel = eyebrow("RECENTLY VIEWED");
+    VBox box =
+        new VBox(
+            9,
+            searchLabel,
+            algorithmSearch,
+            searchResults,
+            categoryLabel,
+            categories,
+            favoriteLabel,
+            favorites,
+            recentLabel,
+            recentlyViewed);
     box.setPadding(new Insets(22, 14, 20, 20));
     box.getStyleClass().add("sidebar");
     VBox.setVgrow(categories, Priority.ALWAYS);
@@ -123,7 +164,7 @@ public final class AlgorithmVisualizerApp extends Application {
     HBox.setHgrow(algorithms, Priority.ALWAYS);
     Label choose = new Label("Algorithm");
     choose.getStyleClass().add("field-label");
-    HBox selector = new HBox(12, choose, algorithms);
+    HBox selector = new HBox(12, choose, algorithms, favorite);
     selector.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
     input.setPromptText("Input");
     HBox.setHgrow(input, Priority.ALWAYS);
@@ -154,13 +195,13 @@ public final class AlgorithmVisualizerApp extends Application {
     result.getStyleClass().add("result");
     HBox.setHgrow(result, Priority.ALWAYS);
     VBox info = informationPanel();
-    ScrollPane scroll = new ScrollPane(info);
-    scroll.setFitToWidth(true);
-    scroll.getStyleClass().add("info-scroll");
-    SplitPane split = new SplitPane(visualCard, scroll);
-    split.setDividerPositions(.72);
-    VBox.setVgrow(split, Priority.ALWAYS);
-    VBox body = new VBox(14, top, split);
+    informationScroll = new ScrollPane(info);
+    informationScroll.setFitToWidth(true);
+    informationScroll.getStyleClass().add("info-scroll");
+    workspaceSplit = new SplitPane(visualCard, informationScroll);
+    workspaceSplit.setDividerPositions(.72);
+    VBox.setVgrow(workspaceSplit, Priority.ALWAYS);
+    VBox body = new VBox(14, top, workspaceSplit);
     body.setPadding(new Insets(20));
     return body;
   }
@@ -171,9 +212,7 @@ public final class AlgorithmVisualizerApp extends Application {
     explanation.setWrapText(true);
     Label pseudoTitle = new Label("PSEUDOCODE");
     pseudoTitle.getStyleClass().add("eyebrow");
-    pseudocode.setEditable(false);
-    pseudocode.setWrapText(false);
-    pseudocode.setPrefRowCount(8);
+    pseudocode.setPrefHeight(190);
     Label statsTitle = new Label("LIVE STATISTICS");
     statsTitle.getStyleClass().add("eyebrow");
     Label legend = new Label("● active    ● frontier / alternate    ● complete");
@@ -208,18 +247,40 @@ public final class AlgorithmVisualizerApp extends Application {
                   .setAll(catalog.stream().filter(d -> d.category().equals(value)).toList());
               algorithms.getSelectionModel().selectFirst();
             });
+    algorithmSearch
+        .textProperty()
+        .addListener((observable, oldValue, query) -> updateSearchResults(query));
+    searchResults
+        .getSelectionModel()
+        .selectedItemProperty()
+        .addListener((observable, oldValue, demo) -> navigateTo(demo));
+    favorites
+        .getSelectionModel()
+        .selectedItemProperty()
+        .addListener((observable, oldValue, demo) -> navigateTo(demo));
+    recentlyViewed
+        .getSelectionModel()
+        .selectedItemProperty()
+        .addListener((observable, oldValue, demo) -> navigateTo(demo));
     algorithms
         .valueProperty()
         .addListener(
             (o, old, demo) -> {
               stopPlayback();
               playback.reset();
+              editHistory.clear();
               visualization.show(null);
               updateButtons();
               boolean isGrid = demo != null && demo.name().startsWith("Grid ");
               gridTools.setManaged(isGrid);
               gridTools.setVisible(isGrid);
               if (demo != null) {
+                history.recordViewed(demo);
+                updatingFavorite = true;
+                favorite.setSelected(history.isFavorite(demo));
+                updateFavoriteLabel();
+                updatingFavorite = false;
+                refreshHistoryLists();
                 input.setText(demo.defaultInput());
                 inputHint.setText(demo.inputHint());
                 explanation.setText(
@@ -228,7 +289,7 @@ public final class AlgorithmVisualizerApp extends Application {
                         + demo.timeComplexity()
                         + "\nSpace: "
                         + demo.spaceComplexity());
-                pseudocode.setText(demo.pseudocode());
+                pseudocode.showCode(demo.pseudocode(), -1);
                 operation.setText(demo.name());
                 result.setText("");
                 progress.setText("Step 0 / 0");
@@ -236,6 +297,16 @@ public final class AlgorithmVisualizerApp extends Application {
                 if (isGrid) previewGrid();
               }
             });
+    favorite.setOnAction(
+        event -> {
+          if (updatingFavorite || algorithms.getValue() == null) return;
+          history.setFavorite(algorithms.getValue(), favorite.isSelected());
+          updateFavoriteLabel();
+          refreshHistoryLists();
+        });
+    lightTheme.setOnAction(event -> updateTheme());
+    focusView.setOnAction(event -> updateFocusMode());
+    about.setOnAction(event -> showAbout());
     input
         .textProperty()
         .addListener(
@@ -351,7 +422,7 @@ public final class AlgorithmVisualizerApp extends Application {
     AlgorithmStep current = next.orElseThrow();
     visualization.show(current);
     operation.setText(current.message());
-    pseudocode.setText(markLine(current.pseudocode(), current.activeLine()));
+    pseudocode.showCode(current.pseudocode(), current.activeLine());
     showStatistics(current);
     progress.setText("Step " + playback.position() + " / " + playback.totalSteps());
     if (playback.state() == PlaybackController.State.FINISHED) finish();
@@ -415,19 +486,12 @@ public final class AlgorithmVisualizerApp extends Application {
         : Long.toString(n.longValue());
   }
 
-  private String markLine(String text, int active) {
-    if (text == null || text.isBlank()) return algorithms.getValue().pseudocode();
-    String[] lines = text.split("\\R");
-    StringBuilder out = new StringBuilder();
-    for (int i = 0; i < lines.length; i++)
-      out.append(i == active ? "▶  " : "   ").append(lines[i]).append('\n');
-    return out.toString();
-  }
-
   private void randomize() {
     AlgorithmDemo demo = algorithms.getValue();
     if (demo == null) return;
-    input.setText(InputGenerator.generate(demo, input.getText(), new Random()));
+    String generated = InputGenerator.generate(demo, input.getText(), new Random());
+    if (demo.name().startsWith("Grid ")) applyEdit(generated);
+    else input.setText(generated);
     reset();
     if (demo.name().startsWith("Grid ")) previewGrid();
   }
@@ -446,19 +510,154 @@ public final class AlgorithmVisualizerApp extends Application {
         setGridStart.isSelected()
             ? GridEditor.Mode.SET_START
             : setGridTarget.isSelected() ? GridEditor.Mode.SET_TARGET : GridEditor.Mode.DRAW_WALLS;
-    input.setText(GridEditor.edit(input.getText(), row, column, mode));
+    applyEdit(GridEditor.edit(input.getText(), row, column, mode));
     reset();
     previewGrid();
   }
 
   private void makeClearGrid() {
-    input.setText(GridEditor.clear(input.getText()));
+    applyEdit(GridEditor.clear(input.getText()));
     reset();
   }
 
   private void makeMaze() {
-    input.setText(GridEditor.randomWalls(input.getText(), new Random()));
+    applyEdit(GridEditor.randomWalls(input.getText(), new Random()));
     reset();
+  }
+
+  private Label eyebrow(String text) {
+    Label label = new Label(text);
+    label.getStyleClass().add("eyebrow");
+    return label;
+  }
+
+  private void updateSearchResults(String query) {
+    String normalized = query == null ? "" : query.trim().toLowerCase();
+    boolean searching = !normalized.isEmpty();
+    searchResults.setManaged(searching);
+    searchResults.setVisible(searching);
+    if (!searching) {
+      searchResults.getItems().clear();
+      return;
+    }
+    searchResults
+        .getItems()
+        .setAll(
+            catalog.stream()
+                .filter(
+                    demo ->
+                        demo.name().toLowerCase().contains(normalized)
+                            || demo.category().toLowerCase().contains(normalized)
+                            || demo.explanation().toLowerCase().contains(normalized))
+                .toList());
+  }
+
+  private void navigateTo(AlgorithmDemo demo) {
+    if (demo == null) return;
+    categories.getSelectionModel().select(demo.category());
+    algorithms.getSelectionModel().select(demo);
+  }
+
+  private void refreshHistoryLists() {
+    favorites.getItems().setAll(history.favorites(catalog));
+    recentlyViewed.getItems().setAll(history.recentlyViewed(catalog));
+  }
+
+  private void updateFavoriteLabel() {
+    favorite.setText(favorite.isSelected() ? "★ Favorite" : "☆ Favorite");
+  }
+
+  private void updateTheme() {
+    root.getStyleClass().remove("light-theme");
+    if (lightTheme.isSelected()) root.getStyleClass().add("light-theme");
+    lightTheme.setText(lightTheme.isSelected() ? "☾ Dark" : "☀ Light");
+  }
+
+  private void updateFocusMode() {
+    if (focusView.getText().equals("Focus View")) {
+      root.setLeft(null);
+      workspaceSplit.getItems().remove(informationScroll);
+      focusView.setText("Exit Focus");
+    } else {
+      root.setLeft(navigation);
+      if (!workspaceSplit.getItems().contains(informationScroll))
+        workspaceSplit.getItems().add(informationScroll);
+      workspaceSplit.setDividerPositions(.72);
+      focusView.setText("Focus View");
+    }
+  }
+
+  private void showAbout() {
+    Alert dialog = new Alert(Alert.AlertType.INFORMATION);
+    dialog.setTitle("About Algorithm Lab");
+    dialog.setHeaderText("Algorithm Lab 2.0.0");
+    dialog.setContentText(
+        "Interactive Algorithms & Data Structures\n\n"
+            + "Java "
+            + System.getProperty("java.version")
+            + " · JavaFX "
+            + System.getProperty("javafx.version", "21")
+            + "\n\nAn independent educational project inspired by computer science coursework.");
+    dialog.showAndWait();
+  }
+
+  private void installKeyboardShortcuts(Scene scene) {
+    start.setTooltip(new Tooltip("Start playback (Space)"));
+    pause.setTooltip(new Tooltip("Pause playback (Space)"));
+    stepButton.setTooltip(new Tooltip("Advance one logical step (Right Arrow)"));
+    reset.setTooltip(new Tooltip("Reset (R)"));
+    generate.setTooltip(new Tooltip("Generate input (G)"));
+    scene.addEventFilter(KeyEvent.KEY_PRESSED, this::handleShortcut);
+  }
+
+  private void handleShortcut(KeyEvent event) {
+    if (event.isShortcutDown() && event.getCode() == KeyCode.F) {
+      algorithmSearch.requestFocus();
+      algorithmSearch.selectAll();
+      event.consume();
+      return;
+    }
+    if (event.isShortcutDown() && event.getCode() == KeyCode.Z) {
+      if (event.isShiftDown()) redoEdit();
+      else undoEdit();
+      event.consume();
+      return;
+    }
+    if (event.getTarget() instanceof TextInputControl) return;
+    if (event.getCode() == KeyCode.SPACE) {
+      if (playback.state() == PlaybackController.State.RUNNING) pause.fire();
+      else if (playback.state() == PlaybackController.State.PAUSED) resume.fire();
+      else start.fire();
+    } else if (event.getCode() == KeyCode.RIGHT) stepButton.fire();
+    else if (event.getCode() == KeyCode.R) reset.fire();
+    else if (event.getCode() == KeyCode.G) generate.fire();
+    else return;
+    event.consume();
+  }
+
+  private void applyEdit(String replacement) {
+    input.setText(editHistory.apply(input.getText(), replacement));
+  }
+
+  private void undoEdit() {
+    if (!isEditableGraphOrGrid()) return;
+    editHistory.undo(input.getText()).ifPresent(this::restoreEdit);
+  }
+
+  private void redoEdit() {
+    if (!isEditableGraphOrGrid()) return;
+    editHistory.redo(input.getText()).ifPresent(this::restoreEdit);
+  }
+
+  private boolean isEditableGraphOrGrid() {
+    AlgorithmDemo demo = algorithms.getValue();
+    return demo != null && demo.category().equals("Graph Algorithms");
+  }
+
+  private void restoreEdit(String value) {
+    input.setText(value);
+    reset();
+    if (algorithms.getValue().name().startsWith("Grid ")) previewGrid();
   }
 
   public static void main(String[] args) {

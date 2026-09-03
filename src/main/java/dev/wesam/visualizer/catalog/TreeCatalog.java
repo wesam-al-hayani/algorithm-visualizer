@@ -25,9 +25,7 @@ final class TreeCatalog {
               "Trees",
               "Binary Tree " + traversal,
               "Visits an example binary tree in " + traversal.toLowerCase() + " order.",
-              traversal.equals("Level-order")
-                  ? "queue root\nvisit front\nqueue its children"
-                  : "recursively combine root, left, and right",
+              traversalPseudocode(traversal),
               "O(n)",
               traversal.equals("Level-order") ? "O(n)" : "O(h)",
               "Values inserted into a BST",
@@ -67,6 +65,15 @@ final class TreeCatalog {
             "10,20,5,6,12,30,7,17,3,4",
             TreeCatalog::bTree));
     return List.copyOf(demos);
+  }
+
+  private static String traversalPseudocode(String traversal) {
+    return switch (traversal) {
+      case "Preorder" -> "visit node\ntraverse left subtree\ntraverse right subtree";
+      case "Inorder" -> "traverse left subtree\nvisit node\ntraverse right subtree";
+      case "Postorder" -> "traverse left subtree\ntraverse right subtree\nvisit node";
+      default -> "enqueue root\nremove and visit queue front\nenqueue its existing children";
+    };
   }
 
   static AlgorithmRun treeTraversal(String input, String traversal) {

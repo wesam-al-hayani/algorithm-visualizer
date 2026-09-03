@@ -65,6 +65,8 @@
                         <include>dev/wesam/visualizer/ui/PlaybackController*</include>
                         <include>dev/wesam/visualizer/ui/GridEditor*</include>
                         <include>dev/wesam/visualizer/ui/InputGenerator*</include>
+                        <include>dev/wesam/visualizer/ui/EditHistory*</include>
+                        <include>dev/wesam/visualizer/ui/AlgorithmHistory*</include>
                     </includes>
                 </configuration>
                 <executions>

@@ -18,9 +18,12 @@
 .hint, .legend { -fx-text-fill: #8797ae; -fx-font-size: 11; }
 .operation { -fx-font-size: 16; -fx-font-weight: 700; }
 .result { -fx-text-fill: #54d6a0; -fx-font-weight: 700; }
-.text-field, .combo-box, .text-area { -fx-background-color: #0e1727; -fx-text-fill: #eaf0fb; -fx-border-color: #31415d; -fx-border-radius: 8; -fx-background-radius: 8; }
+.text-field, .combo-box, .text-area, .pseudocode-view { -fx-background-color: #0e1727; -fx-text-fill: #eaf0fb; -fx-border-color: #31415d; -fx-border-radius: 8; -fx-background-radius: 8; }
 .text-area .content { -fx-background-color: #0e1727; }
 .text-area { -fx-font-family: "SF Mono", "Menlo", monospace; -fx-font-size: 11; }
+.pseudocode-view { -fx-control-inner-background: #0e1727; -fx-background-insets: 0; }
+.pseudocode-view .list-cell { -fx-font-family: "SF Mono", "Menlo", monospace; -fx-font-size: 11; -fx-padding: 5 9; -fx-text-fill: #cbd7e7; -fx-background-radius: 4; }
+.pseudocode-view .list-cell:pseudocode-active, .pseudocode-view .pseudocode-active { -fx-background-color: #774b20; -fx-text-fill: #fff4de; -fx-font-weight: 700; -fx-border-color: #ffb454; -fx-border-width: 0 0 0 3; }
 .combo-box .list-cell { -fx-text-fill: #eaf0fb; }
 .combo-box-popup .list-view {
   -fx-background-color: #0e1727;
@@ -39,6 +42,9 @@
 .button { -fx-background-color: #263650; -fx-text-fill: #edf3fc; -fx-background-radius: 8; -fx-padding: 8 13; -fx-cursor: hand; }
 .button:hover { -fx-background-color: #344a6c; }
 .button:first-child { -fx-background-color: #e9953e; -fx-text-fill: #111827; -fx-font-weight: 800; }
+.button:focused, .toggle-button:focused, .text-field:focused, .combo-box:focused, .list-view:focused { -fx-border-color: #74b9ff; -fx-border-width: 2; -fx-border-radius: 8; }
+.toggle-button { -fx-background-color: #263650; -fx-text-fill: #edf3fc; -fx-background-radius: 8; -fx-padding: 8 11; }
+.toggle-button:selected { -fx-background-color: #e9953e; -fx-text-fill: #111827; -fx-font-weight: 700; }
 .slider .track { -fx-background-color: #34445e; }
 .slider .thumb { -fx-background-color: #ffb454; }
 .info-scroll, .info-scroll > .viewport { -fx-background-color: transparent; }
@@ -49,3 +55,23 @@
 .separator .line { -fx-border-color: #2a3850; }
 .split-pane { -fx-background-color: transparent; -fx-padding: 0; }
 .split-pane-divider { -fx-background-color: #0b1220; -fx-padding: 0 5; }
+
+/* Light theme uses the same accent colors with high-contrast neutral surfaces. */
+.app-root.light-theme { -fx-background-color: #eef3f8; }
+.light-theme .header { -fx-background-color: #ffffff; -fx-border-color: transparent transparent #ccd7e4 transparent; }
+.light-theme .brand-title .label:last-child, .light-theme .label { -fx-text-fill: #172235; }
+.light-theme .sidebar { -fx-background-color: #f7f9fc; -fx-border-color: transparent #ccd7e4 transparent transparent; }
+.light-theme .list-cell { -fx-text-fill: #44546b; }
+.light-theme .list-cell:selected { -fx-background-color: #dbe8f7; -fx-text-fill: #14233a; }
+.light-theme .control-card, .light-theme .visual-card, .light-theme .info-panel { -fx-background-color: #ffffff; -fx-border-color: #d3dde9; }
+.light-theme .text-field, .light-theme .combo-box, .light-theme .text-area, .light-theme .pseudocode-view { -fx-background-color: #f7f9fc; -fx-text-fill: #172235; -fx-border-color: #aebdce; -fx-control-inner-background: #f7f9fc; }
+.light-theme .text-area .content { -fx-background-color: #f7f9fc; }
+.light-theme .combo-box .list-cell, .light-theme .pseudocode-view .list-cell { -fx-text-fill: #24344c; }
+.light-theme .pseudocode-view .list-cell:pseudocode-active, .light-theme .pseudocode-view .pseudocode-active { -fx-background-color: #ffecd2; -fx-text-fill: #512e07; }
+.light-theme .hint, .light-theme .legend, .light-theme .details { -fx-text-fill: #53657b; }
+.light-theme .stat-card { -fx-background-color: #e8eef6; }
+.light-theme .stat-card .label:last-child { -fx-text-fill: #14233a; }
+.light-theme .separator .line { -fx-border-color: #d4dde8; }
+.light-theme .split-pane-divider { -fx-background-color: #eef3f8; }
+.light-theme .button, .light-theme .toggle-button { -fx-background-color: #dce7f4; -fx-text-fill: #172235; }
+.light-theme .button:hover { -fx-background-color: #cad9e9; }
