@@ -116,6 +116,18 @@ final class CatalogSupport {
       Set<Integer> done,
       Map<String, Number> stats,
       String details) {
+    return graphStep(m, g, a, b, done, 1, stats, details);
+  }
+
+  static AlgorithmStep graphStep(
+      String m,
+      GraphAlgorithms.Graph g,
+      Set<Integer> a,
+      Set<Integer> b,
+      Set<Integer> done,
+      int activeLine,
+      Map<String, Number> stats,
+      String details) {
     List<AlgorithmStep.VisualEdge> edges =
         g.edges().stream()
             .map(
@@ -126,7 +138,7 @@ final class CatalogSupport {
     return new AlgorithmStep(
         m,
         "select next vertex or edge\nupdate frontier and labels\nrecord completed state",
-        1,
+        activeLine,
         GRAPH,
         List.of(),
         labels(g.vertices()),

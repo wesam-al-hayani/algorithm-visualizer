@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 5: advanced graph algorithms
+Algorithm Lab V2.0 — Phase 6: Dinic maximum flow
 
 ## Completed
 
@@ -53,18 +53,24 @@ Algorithm Lab V2.0 — Phase 5: advanced graph algorithms
 - [x] Add Johnson's Algorithm with Bellman-Ford potentials, edge reweighting, and repeated Dijkstra
 - [x] Add weighted-graph A* with Euclidean heuristic plus g/h/f and open/closed trace frames
 - [x] Cross-validate all-pairs results on random nonnegative graphs and negative-edge DAGs
+- [x] Add Tarjan SCC with DFS indices, low-link values, stack state, and component frames
+- [x] Add shared low-link analysis for bridges and articulation points
+- [x] Add directed and undirected Hierholzer Euler path/circuit support with edge-ID traversal
+- [x] Add BFS bipartite coloring with explicit conflict-edge reporting
+- [x] Add Hopcroft-Karp BFS/DFS phase visualization and comparison with simple matching
+- [x] Cross-validate Tarjan/Kosaraju, low-link removal definitions, and both matching algorithms on randomized inputs
 
 ## Last Completed Task
 
-Phase 5 shortest paths: Floyd-Warshall, Johnson, and weighted-graph A* with randomized cross-validation
+Phase 5 graph expansion: all mandatory shortest-path, connectivity, Euler, coloring, and matching algorithms
 
 ## Current Task
 
-Implement Tarjan SCC, bridges, articulation points, Euler path/circuit, bipartite check, and Hopcroft-Karp with trace data and cross-validation.
+Implement mandatory Dinic maximum flow, expose level-graph/blocking-flow phases, and compare/cross-validate against Edmonds-Karp.
 
 ## Next Task
 
-Implement mandatory Dinic flow, visualize it, and cross-validate it against Edmonds-Karp.
+Add real maze-generation algorithms and finish grid-editing behavior.
 
 ## Tests
 
@@ -104,6 +110,9 @@ Implement mandatory Dinic flow, visualize it, and cross-validate it against Edmo
 - Phase 5 shortest paths `./mvnw --batch-mode clean test`: PASS (159 JUnit invocations; 65 catalog demos)
 - Phase 5 shortest paths JaCoCo core line coverage: 98.35% (2,201 / 2,238 lines); required minimum: 80%
 - Phase 5 shortest paths JaCoCo core branch coverage: 87.71% (1,413 / 1,611 branches)
+- Phase 5 final `./mvnw --batch-mode clean test`: PASS (166 JUnit invocations; 71 catalog demos)
+- Phase 5 final JaCoCo core line coverage: 98.35% (2,499 / 2,541 lines); required minimum: 80%
+- Phase 5 final JaCoCo core branch coverage: 87.91% (1,571 / 1,787 branches)
 
 ## Known Problems
 
@@ -117,4 +126,4 @@ Implement mandatory Dinic flow, visualize it, and cross-validate it against Edmo
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 5 shortest-path checkpoint ready to commit
+- Pending commits: Phase 5 graph-expansion checkpoint ready to commit

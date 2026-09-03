@@ -45,6 +45,98 @@ class GraphAlgorithmsTest {
   }
 
   @Test
+  void tarjanReportsTheSameStrongComponentsWithIndexAndStackFrames() {
+    Graph graph =
+        new Graph(
+            6,
+            List.of(
+                new Edge(0, 1),
+                new Edge(1, 0),
+                new Edge(1, 2),
+                new Edge(2, 3),
+                new Edge(3, 2),
+                new Edge(3, 4),
+                new Edge(4, 5),
+                new Edge(5, 4)),
+            true);
+    TarjanResult result = tarjanStronglyConnectedComponents(graph);
+    assertEquals(Set.copyOf(stronglyConnectedComponents(graph)), Set.copyOf(result.components()));
+    assertTrue(java.util.Arrays.stream(result.index()).allMatch(value -> value >= 0));
+    assertTrue(result.frames().stream().anyMatch(frame -> !frame.completedComponent().isEmpty()));
+  }
+
+  @Test
+  void lowLinksFindBridgesAndArticulationPointsIncludingParallelEdgeSafety() {
+    Graph graph =
+        new Graph(
+            7,
+            List.of(
+                new Edge(0, 1),
+                new Edge(1, 2),
+                new Edge(2, 0),
+                new Edge(1, 3),
+                new Edge(3, 4),
+                new Edge(4, 5),
+                new Edge(5, 3),
+                new Edge(4, 6)),
+            false);
+    LowLinkResult result = undirectedLowLinks(graph);
+    assertEquals(Set.of(new Edge(1, 3), new Edge(4, 6)), Set.copyOf(result.bridges()));
+    assertEquals(Set.of(1, 3, 4), result.articulationPoints());
+    assertTrue(result.frames().stream().allMatch(frame -> frame.discovery()[frame.current()] >= 0));
+
+    Graph parallel = new Graph(2, List.of(new Edge(0, 1), new Edge(0, 1)), false);
+    assertTrue(undirectedLowLinks(parallel).bridges().isEmpty());
+  }
+
+  @Test
+  void eulerSupportsUndirectedAndDirectedTrailsAndExplainsFailure() {
+    EulerResult circuit =
+        eulerTrail(
+            new Graph(
+                5,
+                List.of(
+                    new Edge(0, 1),
+                    new Edge(1, 2),
+                    new Edge(2, 0),
+                    new Edge(0, 3),
+                    new Edge(3, 4),
+                    new Edge(4, 0)),
+                false));
+    assertTrue(circuit.exists());
+    assertTrue(circuit.circuit());
+    assertEquals(7, circuit.trail().size());
+    assertEquals(circuit.trail().get(0), circuit.trail().get(circuit.trail().size() - 1));
+
+    EulerResult directed = eulerTrail(new Graph(3, List.of(new Edge(0, 1), new Edge(1, 2)), true));
+    assertTrue(directed.exists());
+    assertFalse(directed.circuit());
+    assertEquals(List.of(0, 1, 2), directed.trail());
+
+    EulerResult missing =
+        eulerTrail(
+            new Graph(
+                5, List.of(new Edge(0, 1), new Edge(0, 2), new Edge(0, 3), new Edge(0, 4)), false));
+    assertFalse(missing.exists());
+    assertTrue(missing.reason().contains("odd-degree"));
+  }
+
+  @Test
+  void bipartiteCheckColorsComponentsAndReturnsAConflictEdge() {
+    BipartiteResult square =
+        bipartiteCheck(
+            new Graph(
+                5, List.of(new Edge(0, 1), new Edge(1, 2), new Edge(2, 3), new Edge(3, 0)), false));
+    assertTrue(square.bipartite());
+    assertEquals(0, square.color()[4]);
+    BipartiteResult triangle =
+        bipartiteCheck(
+            new Graph(3, List.of(new Edge(0, 1), new Edge(1, 2), new Edge(2, 0)), false));
+    assertFalse(triangle.bipartite());
+    assertNotNull(triangle.conflict());
+  }
+
+  @Test
   void shortestPathsHandleDisconnectedAndNegativeEdges() {
     Graph positive =
         new Graph(
@@ -100,7 +192,7 @@ class GraphAlgorithmsTest {
     Graph graph =
         new Graph(
             5,
-            List.of(new Edge(0, 1, 1), new Edge(1, 3, 1), new Edge(0, 2, 2), new Edge(2, 3, 2)),
+            List.of(new Edge(0, 1, 1), new Edge(1, 3, 1), new Edge(0, 2, 2), new Edge(2, 3, 3)),
             true);
     List<Point> points =
         List.of(
@@ -153,6 +245,12 @@ class GraphAlgorithmsTest {
   void matchingUnionFindAndGridPaths() {
     boolean[][] bipartite = {{true, true, false}, {false, true, false}, {false, true, true}};
     assertEquals(3, maximumBipartiteMatching(bipartite));
+    MatchingResult matching = hopcroftKarp(bipartite);
+    assertEquals(3, matching.size());
+    assertEquals(3, matching.augmentations());
+    assertTrue(matching.bfsPhases() > 0);
+    for (int left = 0; left < matching.leftMatch().length; left++)
+      assertEquals(left, matching.rightMatch()[matching.leftMatch()[left]]);
     UnionFind sets = new UnionFind(5);
     sets.union(0, 1);
     sets.union(1, 2);

@@ -128,6 +128,123 @@ public final class GraphAlgorithms {
     }
   }
 
+  public record TarjanFrame(
+      int current,
+      int[] index,
+      int[] lowLink,
+      List<Integer> stack,
+      Set<Integer> completedComponent,
+      String event) {
+    public TarjanFrame {
+      index = index.clone();
+      lowLink = lowLink.clone();
+      stack = List.copyOf(stack);
+      completedComponent = Set.copyOf(completedComponent);
+    }
+  }
+
+  public record TarjanResult(
+      List<Set<Integer>> components, int[] index, int[] lowLink, List<TarjanFrame> frames) {
+    public TarjanResult {
+      components = components.stream().map(Set::copyOf).toList();
+      index = index.clone();
+      lowLink = lowLink.clone();
+      frames = List.copyOf(frames);
+    }
+  }
+
+  public record LowLinkFrame(
+      int current,
+      int neighbor,
+      int[] discovery,
+      int[] lowLink,
+      Set<Integer> articulationPoints,
+      List<Edge> bridges,
+      String event) {
+    public LowLinkFrame {
+      discovery = discovery.clone();
+      lowLink = lowLink.clone();
+      articulationPoints = Set.copyOf(articulationPoints);
+      bridges = List.copyOf(bridges);
+    }
+  }
+
+  public record LowLinkResult(
+      List<Edge> bridges,
+      Set<Integer> articulationPoints,
+      int[] discovery,
+      int[] lowLink,
+      int[] parent,
+      List<LowLinkFrame> frames) {
+    public LowLinkResult {
+      bridges = List.copyOf(bridges);
+      articulationPoints = Set.copyOf(articulationPoints);
+      discovery = discovery.clone();
+      lowLink = lowLink.clone();
+      parent = parent.clone();
+      frames = List.copyOf(frames);
+    }
+  }
+
+  public record EulerFrame(
+      int current, List<Integer> stack, List<Integer> reverseTrail, int usedEdges, String event) {
+    public EulerFrame {
+      stack = List.copyOf(stack);
+      reverseTrail = List.copyOf(reverseTrail);
+    }
+  }
+
+  public record EulerResult(
+      boolean exists,
+      boolean circuit,
+      List<Integer> trail,
+      String reason,
+      List<EulerFrame> frames) {
+    public EulerResult {
+      trail = List.copyOf(trail);
+      frames = List.copyOf(frames);
+    }
+  }
+
+  public record BipartiteFrame(
+      int current, int neighbor, int[] color, Set<Integer> frontier, String event) {
+    public BipartiteFrame {
+      color = color.clone();
+      frontier = Set.copyOf(frontier);
+    }
+  }
+
+  public record BipartiteResult(
+      boolean bipartite, int[] color, Edge conflict, List<BipartiteFrame> frames) {
+    public BipartiteResult {
+      color = color.clone();
+      frames = List.copyOf(frames);
+    }
+  }
+
+  public record MatchingFrame(
+      int phase, int[] layers, int[] leftMatch, int[] rightMatch, int augmentedLeft, String event) {
+    public MatchingFrame {
+      layers = layers.clone();
+      leftMatch = leftMatch.clone();
+      rightMatch = rightMatch.clone();
+    }
+  }
+
+  public record MatchingResult(
+      int size,
+      int[] leftMatch,
+      int[] rightMatch,
+      int bfsPhases,
+      int augmentations,
+      List<MatchingFrame> frames) {
+    public MatchingResult {
+      leftMatch = leftMatch.clone();
+      rightMatch = rightMatch.clone();
+      frames = List.copyOf(frames);
+    }
+  }
+
   public static List<Integer> bfs(Graph graph, int start) {
     checkVertex(graph, start);
     List<List<Edge>> adj = graph.adjacency();
@@ -242,6 +359,419 @@ public final class GraphAlgorithms {
     seen[v] = true;
     result.add(v);
     for (Edge e : adj.get(v)) if (!seen[e.to]) collect(e.to, adj, seen, result);
+  }
+
+  /** Tarjan's one-pass strongly connected components algorithm. */
+  public static TarjanResult tarjanStronglyConnectedComponents(Graph graph) {
+    int[] index = new int[graph.vertices];
+    int[] lowLink = new int[graph.vertices];
+    Arrays.fill(index, -1);
+    Arrays.fill(lowLink, -1);
+    boolean[] onStack = new boolean[graph.vertices];
+    Deque<Integer> stack = new ArrayDeque<>();
+    List<Set<Integer>> components = new ArrayList<>();
+    List<TarjanFrame> frames = new ArrayList<>();
+    int[] nextIndex = {0};
+    List<List<Edge>> adjacency = graph.adjacency();
+    for (int vertex = 0; vertex < graph.vertices; vertex++)
+      if (index[vertex] < 0)
+        tarjanVisit(
+            vertex, adjacency, index, lowLink, onStack, stack, nextIndex, components, frames);
+    return new TarjanResult(components, index, lowLink, frames);
+  }
+
+  private static void tarjanVisit(
+      int vertex,
+      List<List<Edge>> adjacency,
+      int[] index,
+      int[] lowLink,
+      boolean[] onStack,
+      Deque<Integer> stack,
+      int[] nextIndex,
+      List<Set<Integer>> components,
+      List<TarjanFrame> frames) {
+    index[vertex] = lowLink[vertex] = nextIndex[0]++;
+    stack.push(vertex);
+    onStack[vertex] = true;
+    frames.add(
+        new TarjanFrame(
+            vertex, index, lowLink, new ArrayList<>(stack), Set.of(), "Discover and push vertex"));
+    for (Edge edge : adjacency.get(vertex)) {
+      if (index[edge.to] < 0) {
+        tarjanVisit(
+            edge.to, adjacency, index, lowLink, onStack, stack, nextIndex, components, frames);
+        lowLink[vertex] = Math.min(lowLink[vertex], lowLink[edge.to]);
+      } else if (onStack[edge.to]) {
+        lowLink[vertex] = Math.min(lowLink[vertex], index[edge.to]);
+      }
+      frames.add(
+          new TarjanFrame(
+              vertex,
+              index,
+              lowLink,
+              new ArrayList<>(stack),
+              Set.of(),
+              "Update low-link through edge " + vertex + " → " + edge.to));
+    }
+    if (lowLink[vertex] == index[vertex]) {
+      Set<Integer> component = new LinkedHashSet<>();
+      int member;
+      do {
+        member = stack.pop();
+        onStack[member] = false;
+        component.add(member);
+      } while (member != vertex);
+      components.add(component);
+      frames.add(
+          new TarjanFrame(
+              vertex,
+              index,
+              lowLink,
+              new ArrayList<>(stack),
+              component,
+              "Pop one strongly connected component"));
+    }
+  }
+
+  /** Computes bridges and articulation points together with one undirected low-link DFS. */
+  public static LowLinkResult undirectedLowLinks(Graph graph) {
+    if (graph.directed)
+      throw new IllegalArgumentException(
+          "bridges and articulation points require an undirected graph");
+    List<List<UndirectedArc>> adjacency = new ArrayList<>();
+    for (int vertex = 0; vertex < graph.vertices; vertex++) adjacency.add(new ArrayList<>());
+    for (int id = 0; id < graph.edges.size(); id++) {
+      Edge edge = graph.edges.get(id);
+      adjacency.get(edge.from).add(new UndirectedArc(edge.to, id));
+      adjacency.get(edge.to).add(new UndirectedArc(edge.from, id));
+    }
+    int[] discovery = new int[graph.vertices];
+    int[] lowLink = new int[graph.vertices];
+    int[] parent = new int[graph.vertices];
+    Arrays.fill(discovery, -1);
+    Arrays.fill(lowLink, -1);
+    Arrays.fill(parent, -1);
+    int[] time = {0};
+    List<Edge> bridges = new ArrayList<>();
+    Set<Integer> articulation = new LinkedHashSet<>();
+    List<LowLinkFrame> frames = new ArrayList<>();
+    for (int vertex = 0; vertex < graph.vertices; vertex++)
+      if (discovery[vertex] < 0)
+        lowLinkVisit(
+            vertex,
+            -1,
+            adjacency,
+            graph,
+            discovery,
+            lowLink,
+            parent,
+            time,
+            bridges,
+            articulation,
+            frames);
+    return new LowLinkResult(bridges, articulation, discovery, lowLink, parent, frames);
+  }
+
+  private static void lowLinkVisit(
+      int vertex,
+      int parentEdge,
+      List<List<UndirectedArc>> adjacency,
+      Graph graph,
+      int[] discovery,
+      int[] lowLink,
+      int[] parent,
+      int[] time,
+      List<Edge> bridges,
+      Set<Integer> articulation,
+      List<LowLinkFrame> frames) {
+    discovery[vertex] = lowLink[vertex] = time[0]++;
+    int children = 0;
+    frames.add(
+        new LowLinkFrame(
+            vertex, -1, discovery, lowLink, articulation, bridges, "Discover vertex " + vertex));
+    for (UndirectedArc arc : adjacency.get(vertex)) {
+      if (arc.edgeId == parentEdge) continue;
+      if (discovery[arc.to] < 0) {
+        children++;
+        parent[arc.to] = vertex;
+        lowLinkVisit(
+            arc.to,
+            arc.edgeId,
+            adjacency,
+            graph,
+            discovery,
+            lowLink,
+            parent,
+            time,
+            bridges,
+            articulation,
+            frames);
+        lowLink[vertex] = Math.min(lowLink[vertex], lowLink[arc.to]);
+        if (lowLink[arc.to] > discovery[vertex]) bridges.add(graph.edges.get(arc.edgeId));
+        if (parentEdge >= 0 && lowLink[arc.to] >= discovery[vertex]) articulation.add(vertex);
+      } else {
+        lowLink[vertex] = Math.min(lowLink[vertex], discovery[arc.to]);
+      }
+      if (parentEdge < 0 && children > 1) articulation.add(vertex);
+      frames.add(
+          new LowLinkFrame(
+              vertex,
+              arc.to,
+              discovery,
+              lowLink,
+              articulation,
+              bridges,
+              "Inspect edge " + vertex + " — " + arc.to));
+    }
+  }
+
+  /** Hierholzer's algorithm for directed or undirected multigraphs. */
+  public static EulerResult eulerTrail(Graph graph) {
+    if (graph.vertices == 0)
+      return new EulerResult(true, true, List.of(), "Empty graph has a trivial circuit", List.of());
+    int start = -1;
+    boolean circuit;
+    if (graph.directed) {
+      int[] in = new int[graph.vertices], out = new int[graph.vertices];
+      for (Edge edge : graph.edges) {
+        out[edge.from]++;
+        in[edge.to]++;
+      }
+      int starts = 0, ends = 0;
+      for (int vertex = 0; vertex < graph.vertices; vertex++) {
+        int difference = out[vertex] - in[vertex];
+        if (difference == 1) {
+          starts++;
+          start = vertex;
+        } else if (difference == -1) ends++;
+        else if (difference != 0) return noEuler("Directed in/out-degree differences exceed one");
+        if (start < 0 && out[vertex] > 0) start = vertex;
+      }
+      if (!((starts == 0 && ends == 0) || (starts == 1 && ends == 1)))
+        return noEuler("Directed graph needs zero or one start/end imbalance pair");
+      circuit = starts == 0;
+    } else {
+      int[] degree = new int[graph.vertices];
+      for (Edge edge : graph.edges) {
+        degree[edge.from]++;
+        degree[edge.to]++;
+      }
+      List<Integer> odd = new ArrayList<>();
+      for (int vertex = 0; vertex < graph.vertices; vertex++) {
+        if ((degree[vertex] & 1) == 1) odd.add(vertex);
+        if (start < 0 && degree[vertex] > 0) start = vertex;
+      }
+      if (odd.size() != 0 && odd.size() != 2)
+        return noEuler("Undirected graph needs exactly zero or two odd-degree vertices");
+      if (odd.size() == 2) start = odd.get(0);
+      circuit = odd.isEmpty();
+    }
+    if (start < 0)
+      return new EulerResult(
+          true, true, List.of(0), "Graph with no edges has a trivial circuit", List.of());
+    if (!nonzeroVerticesConnected(graph, start))
+      return noEuler("Vertices incident to edges are disconnected");
+
+    List<List<TraversalArc>> adjacency = new ArrayList<>();
+    for (int vertex = 0; vertex < graph.vertices; vertex++) adjacency.add(new ArrayList<>());
+    for (int id = 0; id < graph.edges.size(); id++) {
+      Edge edge = graph.edges.get(id);
+      adjacency.get(edge.from).add(new TraversalArc(edge.to, id));
+      if (!graph.directed) adjacency.get(edge.to).add(new TraversalArc(edge.from, id));
+    }
+    boolean[] used = new boolean[graph.edges.size()];
+    int[] cursor = new int[graph.vertices];
+    int usedCount = 0;
+    Deque<Integer> stack = new ArrayDeque<>();
+    List<Integer> reverseTrail = new ArrayList<>();
+    List<EulerFrame> frames = new ArrayList<>();
+    stack.push(start);
+    while (!stack.isEmpty()) {
+      int vertex = stack.peek();
+      List<TraversalArc> outgoing = adjacency.get(vertex);
+      while (cursor[vertex] < outgoing.size() && used[outgoing.get(cursor[vertex]).edgeId])
+        cursor[vertex]++;
+      if (cursor[vertex] == outgoing.size()) {
+        reverseTrail.add(stack.pop());
+        frames.add(
+            new EulerFrame(
+                vertex,
+                new ArrayList<>(stack),
+                reverseTrail,
+                usedCount,
+                "Backtrack and prepend vertex to trail"));
+      } else {
+        TraversalArc arc = outgoing.get(cursor[vertex]++);
+        if (used[arc.edgeId]) continue;
+        used[arc.edgeId] = true;
+        usedCount++;
+        stack.push(arc.to);
+        frames.add(
+            new EulerFrame(
+                arc.to,
+                new ArrayList<>(stack),
+                reverseTrail,
+                usedCount,
+                "Use edge and extend current trail"));
+      }
+    }
+    if (usedCount != graph.edges.size()) return noEuler("Not every edge belongs to one trail");
+    Collections.reverse(reverseTrail);
+    return new EulerResult(
+        true, circuit, reverseTrail, circuit ? "Euler circuit found" : "Euler path found", frames);
+  }
+
+  private static EulerResult noEuler(String reason) {
+    return new EulerResult(false, false, List.of(), reason, List.of());
+  }
+
+  private static boolean nonzeroVerticesConnected(Graph graph, int start) {
+    List<List<Integer>> adjacency = new ArrayList<>();
+    int[] degree = new int[graph.vertices];
+    for (int vertex = 0; vertex < graph.vertices; vertex++) adjacency.add(new ArrayList<>());
+    for (Edge edge : graph.edges) {
+      adjacency.get(edge.from).add(edge.to);
+      adjacency.get(edge.to).add(edge.from);
+      degree[edge.from]++;
+      degree[edge.to]++;
+    }
+    boolean[] seen = new boolean[graph.vertices];
+    Queue<Integer> queue = new ArrayDeque<>();
+    seen[start] = true;
+    queue.add(start);
+    while (!queue.isEmpty()) {
+      int vertex = queue.remove();
+      for (int next : adjacency.get(vertex))
+        if (!seen[next]) {
+          seen[next] = true;
+          queue.add(next);
+        }
+    }
+    for (int vertex = 0; vertex < graph.vertices; vertex++)
+      if (degree[vertex] > 0 && !seen[vertex]) return false;
+    return true;
+  }
+
+  /** BFS two-coloring for an undirected graph. */
+  public static BipartiteResult bipartiteCheck(Graph graph) {
+    if (graph.directed)
+      throw new IllegalArgumentException("bipartite check requires an undirected graph");
+    int[] color = new int[graph.vertices];
+    Arrays.fill(color, -1);
+    List<BipartiteFrame> frames = new ArrayList<>();
+    List<List<Edge>> adjacency = graph.adjacency();
+    for (int start = 0; start < graph.vertices; start++) {
+      if (color[start] >= 0) continue;
+      Queue<Integer> queue = new ArrayDeque<>();
+      color[start] = 0;
+      queue.add(start);
+      while (!queue.isEmpty()) {
+        int current = queue.remove();
+        for (Edge edge : adjacency.get(current)) {
+          if (color[edge.to] < 0) {
+            color[edge.to] = 1 - color[current];
+            queue.add(edge.to);
+            frames.add(
+                new BipartiteFrame(
+                    current,
+                    edge.to,
+                    color,
+                    new LinkedHashSet<>(queue),
+                    "Assign opposite color across edge"));
+          } else if (color[edge.to] == color[current]) {
+            frames.add(
+                new BipartiteFrame(
+                    current,
+                    edge.to,
+                    color,
+                    new LinkedHashSet<>(queue),
+                    "Conflict: adjacent vertices have the same color"));
+            return new BipartiteResult(false, color, edge, frames);
+          }
+        }
+      }
+    }
+    return new BipartiteResult(true, color, null, frames);
+  }
+
+  /** Hopcroft-Karp maximum cardinality matching for a rectangular bipartite adjacency matrix. */
+  public static MatchingResult hopcroftKarp(boolean[][] edges) {
+    int rightSize = validateBipartiteMatrix(edges);
+    int[] leftMatch = new int[edges.length];
+    int[] rightMatch = new int[rightSize];
+    int[] distance = new int[edges.length];
+    Arrays.fill(leftMatch, -1);
+    Arrays.fill(rightMatch, -1);
+    List<MatchingFrame> frames = new ArrayList<>();
+    int size = 0, phases = 0, augmentations = 0;
+    while (hopcroftBfs(edges, leftMatch, rightMatch, distance)) {
+      phases++;
+      frames.add(
+          new MatchingFrame(
+              phases, distance, leftMatch, rightMatch, -1, "BFS builds layers from free vertices"));
+      for (int left = 0; left < edges.length; left++)
+        if (leftMatch[left] < 0 && hopcroftDfs(left, edges, leftMatch, rightMatch, distance)) {
+          size++;
+          augmentations++;
+          frames.add(
+              new MatchingFrame(
+                  phases,
+                  distance,
+                  leftMatch,
+                  rightMatch,
+                  left,
+                  "DFS augments along a shortest layered path"));
+        }
+    }
+    return new MatchingResult(size, leftMatch, rightMatch, phases, augmentations, frames);
+  }
+
+  private static boolean hopcroftBfs(
+      boolean[][] edges, int[] leftMatch, int[] rightMatch, int[] distance) {
+    int unreachable = Integer.MAX_VALUE;
+    Queue<Integer> queue = new ArrayDeque<>();
+    for (int left = 0; left < edges.length; left++) {
+      distance[left] = leftMatch[left] < 0 ? 0 : unreachable;
+      if (leftMatch[left] < 0) queue.add(left);
+    }
+    boolean augmentingPathExists = false;
+    while (!queue.isEmpty()) {
+      int left = queue.remove();
+      for (int right = 0; right < edges[left].length; right++)
+        if (edges[left][right]) {
+          int pairedLeft = rightMatch[right];
+          if (pairedLeft < 0) augmentingPathExists = true;
+          else if (distance[pairedLeft] == unreachable) {
+            distance[pairedLeft] = distance[left] + 1;
+            queue.add(pairedLeft);
+          }
+        }
+    }
+    return augmentingPathExists;
+  }
+
+  private static boolean hopcroftDfs(
+      int left, boolean[][] edges, int[] leftMatch, int[] rightMatch, int[] distance) {
+    for (int right = 0; right < edges[left].length; right++)
+      if (edges[left][right]) {
+        int pairedLeft = rightMatch[right];
+        if (pairedLeft < 0
+            || distance[pairedLeft] == distance[left] + 1
+                && hopcroftDfs(pairedLeft, edges, leftMatch, rightMatch, distance)) {
+          leftMatch[left] = right;
+          rightMatch[right] = left;
+          return true;
+        }
+      }
+    distance[left] = Integer.MAX_VALUE;
+    return false;
+  }
+
+  private static int validateBipartiteMatrix(boolean[][] edges) {
+    int rightSize = edges.length == 0 ? 0 : edges[0].length;
+    for (boolean[] row : edges)
+      if (row.length != rightSize) throw new IllegalArgumentException("ragged matrix");
+    return rightSize;
   }
 
   public static ShortestPaths dijkstra(Graph graph, int source) {
@@ -414,8 +944,9 @@ public final class GraphAlgorithms {
     Arrays.fill(gScore, INF);
     Arrays.fill(fScore, Double.POSITIVE_INFINITY);
     Arrays.fill(parent, -1);
+    double heuristicScale = admissibleEuclideanScale(graph, coordinates);
     for (int vertex = 0; vertex < graph.vertices; vertex++)
-      hScore[vertex] = euclidean(coordinates.get(vertex), coordinates.get(target));
+      hScore[vertex] = heuristicScale * euclidean(coordinates.get(vertex), coordinates.get(target));
     gScore[source] = 0;
     fScore[source] = hScore[source];
     open[source] = true;
@@ -455,6 +986,15 @@ public final class GraphAlgorithms {
 
   private static double euclidean(Point first, Point second) {
     return Math.hypot(first.x - second.x, first.y - second.y);
+  }
+
+  private static double admissibleEuclideanScale(Graph graph, List<Point> coordinates) {
+    double scale = 1;
+    for (Edge edge : graph.edges) {
+      double geometricLength = euclidean(coordinates.get(edge.from), coordinates.get(edge.to));
+      if (geometricLength > 0) scale = Math.min(scale, edge.weight / geometricLength);
+    }
+    return Math.max(0, scale);
   }
 
   private static Set<Integer> indexes(boolean[] flags) {
@@ -511,9 +1051,7 @@ public final class GraphAlgorithms {
   }
 
   public static int maximumBipartiteMatching(boolean[][] edges) {
-    int rightSize = edges.length == 0 ? 0 : edges[0].length;
-    for (boolean[] row : edges)
-      if (row.length != rightSize) throw new IllegalArgumentException("ragged matrix");
+    int rightSize = validateBipartiteMatrix(edges);
     int[] rightMatch = new int[rightSize];
     Arrays.fill(rightMatch, -1);
     int matches = 0;
@@ -609,6 +1147,10 @@ public final class GraphAlgorithms {
   private record DijkstraRow(long[] distance, int[] parent) {}
 
   private record AStarQueueNode(int node, double score) {}
+
+  private record UndirectedArc(int to, int edgeId) {}
+
+  private record TraversalArc(int to, int edgeId) {}
 
   private static long[][] copy(long[][] source) {
     long[][] result = new long[source.length][];

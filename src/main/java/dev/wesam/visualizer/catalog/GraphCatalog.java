@@ -69,6 +69,83 @@ final class GraphCatalog {
             "0>1,1>0,1>2,2>3,3>2,3>4",
             "scc"));
     demos.add(
+        demo(
+            "Graph Algorithms",
+            "Tarjan SCC",
+            "One DFS uses discovery indices, low-link values, and a stack to emit strong"
+                + " components.",
+            "initialize every index as unvisited\n"
+                + "DFS each unvisited vertex\n"
+                + "assign index and low-link; push vertex\n"
+                + "update low-link through tree and stack edges\n"
+                + "if low-link equals index, pop one component",
+            "O(V + E)",
+            "O(V)",
+            "Directed edges (>, optional :weight)",
+            "0>1,1>0,1>2,2>3,3>2,3>4",
+            GraphCatalog::tarjan));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Bridge Finding",
+            "Undirected DFS marks an edge as a bridge when its child cannot reach an ancestor.",
+            "DFS each unvisited vertex\n"
+                + "assign discovery and low times\n"
+                + "update low from back edges and child low values\n"
+                + "if child.low > vertex.discovery, record bridge",
+            "O(V + E)",
+            "O(V)",
+            "Undirected edges (-, optional :weight)",
+            "0-1,1-2,2-0,1-3,3-4,4-5,5-3,4-6",
+            input -> lowLinks(input, false)));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Articulation Points",
+            "Low-link values identify vertices whose removal separates an undirected component.",
+            "DFS each unvisited vertex\n"
+                + "assign discovery and low times\n"
+                + "update low from back edges and child low values\n"
+                + "root is a cut vertex with multiple DFS children\n"
+                + "non-root is a cut vertex when child.low ≥ discovery",
+            "O(V + E)",
+            "O(V)",
+            "Undirected edges (-, optional :weight)",
+            "0-1,1-2,2-0,1-3,3-4,4-5,5-3,4-6",
+            input -> lowLinks(input, true)));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Euler Path / Circuit",
+            "Hierholzer consumes every edge exactly once when degree and connectivity conditions"
+                + " permit.",
+            "check nonzero-degree connectivity\n"
+                + "check undirected odd degrees or directed in/out balance\n"
+                + "choose the required start vertex\n"
+                + "while the stack is not empty\n"
+                + "  use an unused edge, or backtrack into the trail\n"
+                + "reverse the completed trail",
+            "O(V + E)",
+            "O(V + E)",
+            "Use - for undirected edges or > for directed edges",
+            "0-1,1-2,2-0,0-3,3-4,4-0",
+            GraphCatalog::euler));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Bipartite Check",
+            "BFS assigns alternating colors and reports the first same-color conflict edge.",
+            "for each uncolored component\n"
+                + "color its start and enqueue it\n"
+                + "remove a vertex and inspect each edge\n"
+                + "color unvisited neighbors oppositely\n"
+                + "if endpoint colors match, report conflict",
+            "O(V + E)",
+            "O(V)",
+            "Undirected edges (-, optional :weight)",
+            "0-3,0-4,1-3,1-5,2-4,2-5",
+            GraphCatalog::bipartite));
+    demos.add(
         graphDemo(
             "Dijkstra",
             "A priority queue settles the nearest unsettled vertex and relaxes outgoing edges.",
@@ -200,6 +277,23 @@ final class GraphCatalog {
             "Rows separated by /; 1 means an edge",
             "110/010/011",
             GraphCatalog::matching));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Hopcroft–Karp Matching",
+            "BFS layers many shortest augmenting paths, then DFS augments a batch per phase; the"
+                + " result is compared with the simple matcher.",
+            "start BFS from every free left vertex\n"
+                + "build alternating shortest-path layers\n"
+                + "for each free left vertex in the layered graph\n"
+                + "  DFS one shortest augmenting path\n"
+                + "  flip matched and unmatched edges\n"
+                + "repeat phases until no augmenting path exists",
+            "O(E√V)",
+            "O(V)",
+            "Rows separated by /; 1 means an edge",
+            "1100/0110/0011/1001",
+            GraphCatalog::hopcroftKarp));
     for (GridPathfinding.Method method : GridPathfinding.Method.values()) {
       demos.add(
           demo(
@@ -362,6 +456,257 @@ final class GraphCatalog {
               uf.toString()));
     }
     return new AlgorithmRun(s, uf.toString());
+  }
+
+  static AlgorithmRun tarjan(String input) {
+    GraphAlgorithms.Graph graph = parseGraph(input, true);
+    GraphAlgorithms.TarjanResult result = GraphAlgorithms.tarjanStronglyConnectedComponents(graph);
+    List<AlgorithmStep> steps = new ArrayList<>();
+    Set<Integer> completed = new LinkedHashSet<>();
+    int componentCount = 0;
+    for (GraphAlgorithms.TarjanFrame frame : result.frames()) {
+      completed.addAll(frame.completedComponent());
+      if (!frame.completedComponent().isEmpty()) componentCount++;
+      int current = frame.current();
+      steps.add(
+          graphStep(
+              frame.event(),
+              graph,
+              Set.of(current),
+              Set.copyOf(frame.stack()),
+              completed,
+              !frame.completedComponent().isEmpty()
+                  ? 4
+                  : frame.event().startsWith("Discover") ? 2 : 3,
+              Map.of(
+                  "DFS index",
+                  frame.index()[current],
+                  "Low-link",
+                  frame.lowLink()[current],
+                  "Stack",
+                  frame.stack().size(),
+                  "Components",
+                  componentCount),
+              "Index: "
+                  + Arrays.toString(frame.index())
+                  + "\nLow-link: "
+                  + Arrays.toString(frame.lowLink())
+                  + "\nStack: "
+                  + frame.stack()));
+    }
+    return new AlgorithmRun(steps, "Strong components: " + result.components());
+  }
+
+  static AlgorithmRun lowLinks(String input, boolean articulationMode) {
+    GraphAlgorithms.Graph graph = parseGraph(input, false);
+    GraphAlgorithms.LowLinkResult result = GraphAlgorithms.undirectedLowLinks(graph);
+    Set<Integer> bridgeVertices = new LinkedHashSet<>();
+    result
+        .bridges()
+        .forEach(
+            edge -> {
+              bridgeVertices.add(edge.from());
+              bridgeVertices.add(edge.to());
+            });
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (GraphAlgorithms.LowLinkFrame frame : result.frames()) {
+      Set<Integer> active = new LinkedHashSet<>();
+      active.add(frame.current());
+      if (frame.neighbor() >= 0) active.add(frame.neighbor());
+      steps.add(
+          graphStep(
+              frame.event(),
+              graph,
+              active,
+              articulationMode ? frame.articulationPoints() : bridgeVertices,
+              Set.of(),
+              articulationMode && frame.articulationPoints().contains(frame.current())
+                  ? 4
+                  : !articulationMode && !frame.bridges().isEmpty() ? 3 : 2,
+              Map.of(
+                  "Discovery",
+                  frame.discovery()[frame.current()],
+                  "Low-link",
+                  frame.lowLink()[frame.current()],
+                  "Bridges",
+                  frame.bridges().size(),
+                  "Cut vertices",
+                  frame.articulationPoints().size()),
+              "Discovery: "
+                  + Arrays.toString(frame.discovery())
+                  + "\nLow-link: "
+                  + Arrays.toString(frame.lowLink())
+                  + "\nBridges: "
+                  + frame.bridges()
+                  + "\nArticulation points: "
+                  + frame.articulationPoints()));
+    }
+    String summary =
+        articulationMode
+            ? "Articulation points: " + result.articulationPoints()
+            : "Bridges: " + result.bridges();
+    return new AlgorithmRun(steps, summary);
+  }
+
+  static AlgorithmRun euler(String input) {
+    boolean directed = input.contains(">");
+    GraphAlgorithms.Graph graph = parseGraph(input, directed);
+    GraphAlgorithms.EulerResult result = GraphAlgorithms.eulerTrail(graph);
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (GraphAlgorithms.EulerFrame frame : result.frames())
+      steps.add(
+          graphStep(
+              frame.event(),
+              graph,
+              Set.of(frame.current()),
+              Set.copyOf(frame.stack()),
+              Set.copyOf(frame.reverseTrail()),
+              4,
+              Map.of(
+                  "Used edges",
+                  frame.usedEdges(),
+                  "Stack",
+                  frame.stack().size(),
+                  "Trail vertices",
+                  frame.reverseTrail().size()),
+              "Stack: "
+                  + frame.stack()
+                  + "\nReverse trail: "
+                  + frame.reverseTrail()
+                  + "\n"
+                  + result.reason()));
+    if (steps.isEmpty())
+      steps.add(
+          graphStep(
+              result.reason(),
+              graph,
+              Set.of(),
+              Set.of(),
+              Set.copyOf(result.trail()),
+              Map.of("Euler trail exists", result.exists() ? 1 : 0),
+              result.reason()));
+    return new AlgorithmRun(
+        steps,
+        result.exists()
+            ? (result.circuit() ? "Euler circuit: " : "Euler path: ") + result.trail()
+            : "No Euler path: " + result.reason());
+  }
+
+  static AlgorithmRun bipartite(String input) {
+    GraphAlgorithms.Graph graph = parseGraph(input, false);
+    GraphAlgorithms.BipartiteResult result = GraphAlgorithms.bipartiteCheck(graph);
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (GraphAlgorithms.BipartiteFrame frame : result.frames()) {
+      Set<Integer> firstColor = new LinkedHashSet<>(), secondColor = new LinkedHashSet<>();
+      for (int vertex = 0; vertex < frame.color().length; vertex++) {
+        if (frame.color()[vertex] == 0) firstColor.add(vertex);
+        if (frame.color()[vertex] == 1) secondColor.add(vertex);
+      }
+      Set<Integer> active = Set.of(frame.current(), frame.neighbor());
+      steps.add(
+          graphStep(
+              frame.event(),
+              graph,
+              active,
+              firstColor,
+              secondColor,
+              frame.event().startsWith("Conflict") ? 4 : 3,
+              Map.of(
+                  "Color 0",
+                  firstColor.size(),
+                  "Color 1",
+                  secondColor.size(),
+                  "Frontier",
+                  frame.frontier().size()),
+              "Colors: "
+                  + Arrays.toString(frame.color())
+                  + (result.conflict() == null ? "" : "\nConflict: " + result.conflict())));
+    }
+    if (steps.isEmpty())
+      steps.add(
+          graphStep(
+              "No coloring conflict",
+              graph,
+              Set.of(),
+              Set.of(),
+              Set.of(),
+              Map.of("Bipartite", result.bipartite() ? 1 : 0),
+              "Colors: " + Arrays.toString(result.color())));
+    return new AlgorithmRun(steps, result.bipartite() ? "Bipartite" : "Not Bipartite");
+  }
+
+  static AlgorithmRun hopcroftKarp(String input) {
+    boolean[][] edges = bipartiteMatrix(input);
+    GraphAlgorithms.MatchingResult result = GraphAlgorithms.hopcroftKarp(edges);
+    int simple = GraphAlgorithms.maximumBipartiteMatching(edges);
+    List<String> labels = bipartiteLabels(edges);
+    List<AlgorithmStep.VisualEdge> visualEdges = bipartiteEdges(edges);
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (GraphAlgorithms.MatchingFrame frame : result.frames()) {
+      Set<Integer> active = frame.augmentedLeft() < 0 ? Set.of() : Set.of(frame.augmentedLeft());
+      Set<Integer> free = new LinkedHashSet<>(), matched = new LinkedHashSet<>();
+      for (int left = 0; left < frame.leftMatch().length; left++) {
+        if (frame.leftMatch()[left] < 0) free.add(left);
+        else {
+          matched.add(left);
+          matched.add(edges.length + frame.leftMatch()[left]);
+        }
+      }
+      steps.add(
+          new AlgorithmStep(
+              frame.event(),
+              "BFS layers free left vertices\n"
+                  + "DFS augments a batch of shortest paths\n"
+                  + "repeat until no augmenting path exists",
+              frame.augmentedLeft() < 0 ? 1 : 3,
+              GRAPH,
+              List.of(),
+              labels,
+              active,
+              free,
+              matched,
+              visualEdges,
+              Map.of(
+                  "BFS phase",
+                  frame.phase(),
+                  "Matching",
+                  countMatches(frame.leftMatch()),
+                  "Free left",
+                  free.size()),
+              "Layers: "
+                  + Arrays.toString(frame.layers())
+                  + "\nLeft matches: "
+                  + Arrays.toString(frame.leftMatch())));
+    }
+    if (steps.isEmpty())
+      steps.add(
+          new AlgorithmStep(
+              "No augmenting path exists",
+              "BFS layers free left vertices\n"
+                  + "DFS augments a batch of shortest paths\n"
+                  + "repeat until no augmenting path exists",
+              2,
+              GRAPH,
+              List.of(),
+              labels,
+              Set.of(),
+              Set.of(),
+              Set.of(),
+              visualEdges,
+              Map.of("Matching", result.size()),
+              "No matchable edge"));
+    return new AlgorithmRun(
+        steps,
+        "Hopcroft–Karp matching: "
+            + result.size()
+            + "; simple augmenting-path matching: "
+            + simple
+            + "; agree: "
+            + (result.size() == simple));
+  }
+
+  private static int countMatches(int[] leftMatch) {
+    return (int) Arrays.stream(leftMatch).filter(value -> value >= 0).count();
   }
 
   static AlgorithmRun allPairs(String input, boolean useJohnson) {
@@ -603,20 +948,10 @@ final class GraphCatalog {
   }
 
   static AlgorithmRun matching(String input) {
-    String[] rows = input.trim().split("/");
-    boolean[][] e = new boolean[rows.length][];
-    for (int i = 0; i < rows.length; i++) {
-      e[i] = new boolean[rows[i].length()];
-      for (int j = 0; j < e[i].length; j++) e[i][j] = rows[i].charAt(j) == '1';
-    }
+    boolean[][] e = bipartiteMatrix(input);
     int count = GraphAlgorithms.maximumBipartiteMatching(e);
-    List<String> labels = new ArrayList<>();
-    for (int i = 0; i < rows.length; i++) labels.add("L" + i);
-    for (int j = 0; j < (rows.length == 0 ? 0 : e[0].length); j++) labels.add("R" + j);
-    List<AlgorithmStep.VisualEdge> edges = new ArrayList<>();
-    for (int i = 0; i < e.length; i++)
-      for (int j = 0; j < e[i].length; j++)
-        if (e[i][j]) edges.add(new AlgorithmStep.VisualEdge(i, rows.length + j, 1, false, ""));
+    List<String> labels = bipartiteLabels(e);
+    List<AlgorithmStep.VisualEdge> edges = bipartiteEdges(e);
     return new AlgorithmRun(
         List.of(
             new AlgorithmStep(
@@ -626,13 +961,48 @@ final class GraphCatalog {
                 GRAPH,
                 List.of(),
                 labels,
-                rangeSet(0, rows.length - 1),
-                rangeSet(rows.length, labels.size() - 1),
+                rangeSet(0, e.length - 1),
+                rangeSet(e.length, labels.size() - 1),
                 Set.of(),
                 edges,
                 Map.of("Matching size", count),
                 "Left and right partitions")),
         "Maximum matching size: " + count);
+  }
+
+  private static boolean[][] bipartiteMatrix(String input) {
+    String[] rows = input.trim().split("/");
+    if (rows.length == 0 || rows[0].isEmpty())
+      throw new IllegalArgumentException("bipartite matrix cannot be empty");
+    int columns = rows[0].length();
+    boolean[][] edges = new boolean[rows.length][columns];
+    for (int row = 0; row < rows.length; row++) {
+      if (rows[row].length() != columns)
+        throw new IllegalArgumentException("bipartite matrix rows differ");
+      for (int column = 0; column < columns; column++) {
+        char value = rows[row].charAt(column);
+        if (value != '0' && value != '1')
+          throw new IllegalArgumentException("bipartite matrix uses only 0 and 1");
+        edges[row][column] = value == '1';
+      }
+    }
+    return edges;
+  }
+
+  private static List<String> bipartiteLabels(boolean[][] edges) {
+    List<String> labels = new ArrayList<>();
+    for (int left = 0; left < edges.length; left++) labels.add("L" + left);
+    for (int right = 0; right < edges[0].length; right++) labels.add("R" + right);
+    return labels;
+  }
+
+  private static List<AlgorithmStep.VisualEdge> bipartiteEdges(boolean[][] edges) {
+    List<AlgorithmStep.VisualEdge> visualEdges = new ArrayList<>();
+    for (int left = 0; left < edges.length; left++)
+      for (int right = 0; right < edges[left].length; right++)
+        if (edges[left][right])
+          visualEdges.add(new AlgorithmStep.VisualEdge(left, edges.length + right, 1, false, ""));
+    return visualEdges;
   }
 
   static AlgorithmRun grid(String input, GridPathfinding.Method method) {

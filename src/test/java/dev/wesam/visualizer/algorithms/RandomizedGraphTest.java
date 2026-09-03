@@ -87,6 +87,61 @@ class RandomizedGraphTest {
   }
 
   @Test
+  void randomizedTarjanPartitionsMatchKosaraju() {
+    Random random = new Random(0x5CC7A);
+    for (int trial = 0; trial < 150; trial++) {
+      int vertices = 1 + random.nextInt(18);
+      List<Edge> edges = new ArrayList<>();
+      for (int from = 0; from < vertices; from++)
+        for (int to = 0; to < vertices; to++)
+          if (from != to && random.nextDouble() < .16) edges.add(new Edge(from, to));
+      Graph graph = new Graph(vertices, edges, true);
+      assertEquals(
+          Set.copyOf(stronglyConnectedComponents(graph)),
+          Set.copyOf(tarjanStronglyConnectedComponents(graph).components()),
+          "trial " + trial);
+    }
+  }
+
+  @Test
+  void randomizedHopcroftKarpMatchesSimpleAugmentingPaths() {
+    Random random = new Random(0xB1A274);
+    for (int trial = 0; trial < 300; trial++) {
+      int leftSize = 1 + random.nextInt(16), rightSize = 1 + random.nextInt(16);
+      boolean[][] edges = new boolean[leftSize][rightSize];
+      for (int left = 0; left < leftSize; left++)
+        for (int right = 0; right < rightSize; right++)
+          edges[left][right] = random.nextDouble() < .28;
+      MatchingResult result = hopcroftKarp(edges);
+      assertEquals(maximumBipartiteMatching(edges), result.size(), "trial " + trial);
+      assertEquals(result.size(), result.augmentations());
+    }
+  }
+
+  @Test
+  void randomizedLowLinksMatchRemovalBasedDefinitions() {
+    Random random = new Random(0x10A11);
+    for (int trial = 0; trial < 140; trial++) {
+      int vertices = 2 + random.nextInt(11);
+      List<Edge> edges = new ArrayList<>();
+      for (int first = 0; first < vertices; first++)
+        for (int second = first + 1; second < vertices; second++)
+          if (random.nextDouble() < .24) edges.add(new Edge(first, second));
+      Graph graph = new Graph(vertices, edges, false);
+      LowLinkResult result = undirectedLowLinks(graph);
+      int baseline = componentCount(graph, -1, -1);
+      Set<Edge> expectedBridges = new HashSet<>();
+      for (int edge = 0; edge < edges.size(); edge++)
+        if (componentCount(graph, -1, edge) > baseline) expectedBridges.add(edges.get(edge));
+      Set<Integer> expectedArticulation = new HashSet<>();
+      for (int vertex = 0; vertex < vertices; vertex++)
+        if (componentCount(graph, vertex, -1) > baseline) expectedArticulation.add(vertex);
+      assertEquals(expectedBridges, Set.copyOf(result.bridges()), "bridges trial " + trial);
+      assertEquals(expectedArticulation, result.articulationPoints(), "cuts trial " + trial);
+    }
+  }
+
+  @Test
   void randomizedTraversalsVisitExactlyTheReachableVertices() {
     Random random = new Random(0xBF5);
     for (int trial = 0; trial < 60; trial++) {
@@ -152,6 +207,15 @@ class RandomizedGraphTest {
                 1));
     assertThrows(
         IllegalArgumentException.class,
+        () -> undirectedLowLinks(new Graph(2, List.of(new Edge(0, 1)), true)));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> bipartiteCheck(new Graph(2, List.of(new Edge(0, 1)), true)));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> hopcroftKarp(new boolean[][] {{true}, {true, false}}));
+    assertThrows(
+        IllegalArgumentException.class,
         () ->
             GridPathfinding.find(
                 new boolean[][] {{false}, {false, true}},
@@ -165,5 +229,35 @@ class RandomizedGraphTest {
     if (first == second) return;
     int low = Math.min(first, second), high = Math.max(first, second);
     if (used.add(low + ":" + high)) edges.add(new Edge(low, high, weight));
+  }
+
+  private static int componentCount(Graph graph, int removedVertex, int removedEdge) {
+    List<List<Integer>> adjacency = new ArrayList<>();
+    for (int vertex = 0; vertex < graph.vertices(); vertex++) adjacency.add(new ArrayList<>());
+    for (int index = 0; index < graph.edges().size(); index++) {
+      if (index == removedEdge) continue;
+      Edge edge = graph.edges().get(index);
+      if (edge.from() == removedVertex || edge.to() == removedVertex) continue;
+      adjacency.get(edge.from()).add(edge.to());
+      adjacency.get(edge.to()).add(edge.from());
+    }
+    boolean[] seen = new boolean[graph.vertices()];
+    int components = 0;
+    for (int start = 0; start < graph.vertices(); start++) {
+      if (start == removedVertex || seen[start]) continue;
+      components++;
+      java.util.ArrayDeque<Integer> queue = new java.util.ArrayDeque<>();
+      queue.add(start);
+      seen[start] = true;
+      while (!queue.isEmpty()) {
+        int current = queue.remove();
+        for (int next : adjacency.get(current))
+          if (!seen[next]) {
+            seen[next] = true;
+            queue.add(next);
+          }
+      }
+    }
+    return components;
   }
 }
