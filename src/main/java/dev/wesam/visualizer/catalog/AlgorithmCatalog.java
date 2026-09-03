@@ -1,0 +1,1782 @@
+package dev.wesam.visualizer.catalog;
+
+import static dev.wesam.visualizer.model.AlgorithmStep.VisualKind.*;
+
+import dev.wesam.visualizer.algorithms.EducationalHashTable;
+import dev.wesam.visualizer.algorithms.GraphAlgorithms;
+import dev.wesam.visualizer.algorithms.GridPathfinding;
+import dev.wesam.visualizer.algorithms.MatrixAlgorithms;
+import dev.wesam.visualizer.algorithms.OptimizationAlgorithms;
+import dev.wesam.visualizer.algorithms.SearchAlgorithms;
+import dev.wesam.visualizer.algorithms.SortAlgorithms;
+import dev.wesam.visualizer.algorithms.StringAlgorithms;
+import dev.wesam.visualizer.algorithms.UnionFind;
+import dev.wesam.visualizer.model.AlgorithmRun;
+import dev.wesam.visualizer.model.AlgorithmStep;
+import dev.wesam.visualizer.structures.BTree;
+import dev.wesam.visualizer.structures.BinaryHeap;
+import dev.wesam.visualizer.structures.BinarySearchTree;
+import dev.wesam.visualizer.structures.BinomialHeap;
+import dev.wesam.visualizer.structures.FibonacciHeap;
+import dev.wesam.visualizer.structures.RedBlackTree;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public final class AlgorithmCatalog {
+  private AlgorithmCatalog() {}
+
+  public static List<AlgorithmDemo> create() {
+    List<AlgorithmDemo> demos = new ArrayList<>();
+    for (SortAlgorithms.Kind kind : SortAlgorithms.Kind.values()) {
+      String name = title(kind.name());
+      demos.add(
+          demo(
+              "Sorting",
+              name,
+              name
+                  + " rearranges values into nondecreasing order. Colored bars show the active"
+                  + " comparison, partition, and finished region.",
+              "choose the active range\ncompare keys\nmove or swap values\ngrow the sorted region",
+              sortTime(kind),
+              kind == SortAlgorithms.Kind.MERGE ? "O(n)" : "O(1)–O(n)",
+              "Comma-separated integers",
+              "38,12,27,6,19,44,3,31",
+              input -> SortAlgorithms.visualize(numbersLimited(input, 80, "sorting"), kind)));
+    }
+    demos.add(
+        demo(
+            "Searching & Selection",
+            "Linear Search",
+            "Checks entries from left to right until the target is found.",
+            "for each index i\n  if values[i] = target return i\nreturn not found",
+            "O(n)",
+            "O(1)",
+            "values ; target",
+            "8,3,6,2,9,5 ; 9",
+            AlgorithmCatalog::linearSearch));
+    demos.add(
+        demo(
+            "Searching & Selection",
+            "Binary Search",
+            "Repeatedly halves a sorted search interval.",
+            "while low ≤ high\n  middle ← (low + high) / 2\n  keep the half containing target",
+            "O(log n)",
+            "O(1)",
+            "sorted values ; target",
+            "2,5,8,12,16,23,38,56 ; 23",
+            AlgorithmCatalog::binarySearch));
+    demos.add(
+        demo(
+            "Searching & Selection",
+            "Quickselect",
+            "Partitions like quicksort but continues only in the side containing rank k.",
+            "partition around pivot\nif pivot = k return\nselect left or right side",
+            "Average O(n), worst O(n²)",
+            "O(1)",
+            "values ; zero-based k",
+            "9,1,8,2,7,3,6,4,5 ; 4",
+            input -> selection(input, false)));
+    demos.add(
+        demo(
+            "Searching & Selection",
+            "Median of Medians",
+            "Deterministic selection chooses a robust pivot from medians of groups of five.",
+            "split into groups of five\nselect median of group medians\npartition and recurse",
+            "O(n)",
+            "O(n)",
+            "values ; zero-based k",
+            "14,3,9,7,1,12,8,5,2,10,6,11,4,13 ; 6",
+            input -> selection(input, true)));
+
+    demos.add(
+        demo(
+            "Strings & Hashing",
+            "Naive String Matching",
+            "Aligns the pattern at every possible text position.",
+            "for every alignment s\n  compare pattern left to right\n  report complete matches",
+            "O(nm)",
+            "O(1)",
+            "text ; pattern",
+            "ABABACABABA ; ABA",
+            input -> stringMatch(input, "naive")));
+    demos.add(
+        demo(
+            "Strings & Hashing",
+            "Knuth–Morris–Pratt",
+            "Uses a prefix table to avoid rechecking characters known to match.",
+            "build longest-prefix-suffix table\n"
+                + "compare text and pattern\n"
+                + "on mismatch follow prefix link",
+            "O(n + m)",
+            "O(m)",
+            "text ; pattern",
+            "ABABACABABA ; ABABA",
+            input -> stringMatch(input, "kmp")));
+    demos.add(
+        demo(
+            "Strings & Hashing",
+            "Rabin–Karp",
+            "Compares rolling hashes before verifying candidate matches.",
+            "hash pattern and first window\ncompare hashes\nroll hash to next alignment",
+            "Expected O(n + m)",
+            "O(1)",
+            "text ; pattern",
+            "THE QUICK BROWN FOX ; OWN",
+            input -> stringMatch(input, "rabin")));
+    for (EducationalHashTable.Strategy strategy : EducationalHashTable.Strategy.values()) {
+      demos.add(
+          demo(
+              "Strings & Hashing",
+              title(strategy.name()),
+              "Interactive educational hash table; probes and collisions are taken from real"
+                  + " insert/search/delete operations.",
+              "bucket ← floorMod(key, capacity)\n"
+                  + "follow chain or probing sequence\n"
+                  + "insert, search, or mark deleted",
+              "Expected O(1), worst O(n)",
+              "O(n)",
+              "Keys to insert; prefix ? to search, - to delete",
+              "12,23,34,8,19,?34,-23",
+              input -> hashDemo(input, strategy)));
+    }
+
+    addGraphDemos(demos);
+    addTreeAndHeapDemos(demos);
+    addOptimizationDemos(demos);
+    addAnalysisDemos(demos);
+    return List.copyOf(demos);
+  }
+
+  private static void addGraphDemos(List<AlgorithmDemo> demos) {
+    demos.add(
+        graphDemo(
+            "Breadth-First Search",
+            "A FIFO queue explores vertices in layers.",
+            "enqueue start\nwhile queue not empty\n  visit front and enqueue unseen neighbors",
+            "O(V + E)",
+            false,
+            "0-1,0-2,1-3,2-4,4-5",
+            "bfs"));
+    demos.add(
+        graphDemo(
+            "Depth-First Search",
+            "Recursion/stack follows one branch before backtracking.",
+            "visit vertex\nfor each unseen neighbor\n  recursively visit neighbor",
+            "O(V + E)",
+            false,
+            "0-1,0-2,1-3,2-4,4-5",
+            "dfs"));
+    demos.add(
+        graphDemo(
+            "Connected Components",
+            "Repeated BFS groups every vertex of an undirected graph.",
+            "for each unvisited vertex\n  start BFS\n  emit one component",
+            "O(V + E)",
+            false,
+            "0-1,1-2,3-4,5-6",
+            "components"));
+    demos.add(
+        graphDemo(
+            "Topological Sort",
+            "Kahn's algorithm repeatedly removes vertices with indegree zero.",
+            "compute indegrees\n"
+                + "enqueue zero-indegree vertices\n"
+                + "remove and decrease successor indegrees",
+            "O(V + E)",
+            true,
+            "0>1,0>2,1>3,2>3,3>4",
+            "topological"));
+    demos.add(
+        graphDemo(
+            "Kosaraju SCC",
+            "Two DFS passes group mutually reachable vertices.",
+            "DFS to get finish order\nreverse every edge\nDFS in reverse finish order",
+            "O(V + E)",
+            true,
+            "0>1,1>0,1>2,2>3,3>2,3>4",
+            "scc"));
+    demos.add(
+        graphDemo(
+            "Dijkstra",
+            "A priority queue settles the nearest unsettled vertex and relaxes outgoing edges.",
+            "distance[start] ← 0\nextract nearest unsettled vertex\nrelax each outgoing edge",
+            "O((V + E) log V)",
+            true,
+            "0>1:4,0>2:1,2>1:2,1>3:1,2>3:5,3>4:3",
+            "dijkstra"));
+    demos.add(
+        graphDemo(
+            "Bellman–Ford",
+            "Repeated edge relaxation supports negative weights and detects reachable negative"
+                + " cycles.",
+            "repeat V−1 times\n  relax every edge\none more pass detects negative cycle",
+            "O(VE)",
+            true,
+            "0>1:4,0>2:5,1>2:-2,2>3:3,3>4:1",
+            "bellman"));
+    demos.add(
+        graphDemo(
+            "Kruskal Minimum Spanning Tree",
+            "Takes edges by weight while Union-Find rejects cycles.",
+            "sort edges by weight\n"
+                + "if endpoints are in different sets\n"
+                + "  choose edge and union sets",
+            "O(E log E)",
+            false,
+            "0-1:1,0-2:4,1-2:2,1-3:5,2-3:3",
+            "kruskal"));
+    demos.add(
+        graphDemo(
+            "Prim Minimum Spanning Tree",
+            "Grows one tree with the cheapest edge leaving it.",
+            "start with one vertex\nqueue crossing edges\nchoose cheapest edge to a new vertex",
+            "O(E log V)",
+            false,
+            "0-1:1,0-2:4,1-2:2,1-3:5,2-3:3",
+            "prim"));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Disjoint Set / Union-Find",
+            "Union by rank and path compression maintain disjoint components.",
+            "make each item its own parent\n"
+                + "find compresses parent paths\n"
+                + "union attaches lower rank root",
+            "Almost O(1) amortized",
+            "O(n)",
+            "Pairs to union",
+            "0-1,2-3,1-2,4-5,3-5",
+            AlgorithmCatalog::unionFind));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Edmonds–Karp Max Flow / Min Cut",
+            "BFS finds augmenting paths in the residual network; unreachable residual vertices"
+                + " define the minimum cut.",
+            "while BFS finds source-to-sink path\n"
+                + "  find bottleneck\n"
+                + "  update forward and reverse residual edges",
+            "O(VE²)",
+            "O(V²)",
+            "Uses the classic six-vertex network",
+            "classic network",
+            AlgorithmCatalog::maxFlow));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Maximum Bipartite Matching",
+            "An augmenting-path algorithm reassigns matches to make room for each left vertex.",
+            "for each left vertex\n  search an augmenting path\n  flip matching along path",
+            "O(VE)",
+            "O(V)",
+            "Rows separated by /; 1 means an edge",
+            "110/010/011",
+            AlgorithmCatalog::matching));
+    for (GridPathfinding.Method method : GridPathfinding.Method.values()) {
+      demos.add(
+          demo(
+              "Graph Algorithms",
+              "Grid " + title(method.name()),
+              "Explores a wall grid and reconstructs a path. A* uses Manhattan distance.",
+              "put start in frontier\n"
+                  + "expand the next cell\n"
+                  + "add passable unseen neighbors\n"
+                  + "reconstruct parents at target",
+              method == GridPathfinding.Method.DFS ? "O(RC)" : "O(RC log RC)",
+              "O(RC)",
+              "Rows of ., #, S, T separated by /",
+              "S...../.##.../...#../.#..../.....T",
+              input -> grid(input, method)));
+    }
+  }
+
+  private static void addTreeAndHeapDemos(List<AlgorithmDemo> demos) {
+    for (String traversal : List.of("Preorder", "Inorder", "Postorder", "Level-order"))
+      demos.add(
+          demo(
+              "Trees",
+              "Binary Tree " + traversal,
+              "Visits an example binary tree in " + traversal.toLowerCase() + " order.",
+              traversal.equals("Level-order")
+                  ? "queue root\nvisit front\nqueue its children"
+                  : "recursively combine root, left, and right",
+              "O(n)",
+              traversal.equals("Level-order") ? "O(n)" : "O(h)",
+              "Values inserted into a BST",
+              "8,3,10,1,6,14,4,7,13",
+              input -> treeTraversal(input, traversal)));
+    demos.add(
+        demo(
+            "Trees",
+            "Binary Search Tree",
+            "Inserts keys, searches paths, and performs textbook deletion.",
+            "compare with current key\ngo left or right\ninsert/search; delete via successor",
+            "Average O(log n), worst O(n)",
+            "O(h)",
+            "Keys; optional ?search or -delete",
+            "8,3,10,1,6,14,4,7,?6,-3",
+            AlgorithmCatalog::bst));
+    demos.add(
+        demo(
+            "Trees",
+            "Red-Black Tree",
+            "Balanced BST insertion repairs red-parent violations using recoloring and rotations.",
+            "BST insert red node\nwhile parent is red\n  recolor or rotate\ncolor root black",
+            "O(log n)",
+            "O(log n)",
+            "Keys to insert",
+            "41,38,31,12,19,8,50,60",
+            AlgorithmCatalog::redBlack));
+    demos.add(
+        demo(
+            "Trees",
+            "B-Tree",
+            "Multi-key balanced tree insertion splits full nodes on the descent.",
+            "if root full, split it\ndescend toward key\nsplit any full child before entering",
+            "O(log n)",
+            "O(log n)",
+            "Keys to insert (minimum degree 2)",
+            "10,20,5,6,12,30,7,17,3,4",
+            AlgorithmCatalog::bTree));
+
+    demos.add(
+        demo(
+            "Heaps & Advanced Structures",
+            "Binary Min Heap",
+            "Array-backed complete tree maintaining the minimum at its root.",
+            "insert at end and sift up\nextract root and sift down",
+            "O(log n) per update",
+            "O(n)",
+            "Values",
+            "9,3,7,1,6,2,8",
+            input -> binaryHeap(input, BinaryHeap.Type.MIN, false)));
+    demos.add(
+        demo(
+            "Heaps & Advanced Structures",
+            "Binary Max Heap",
+            "Array-backed complete tree maintaining the maximum at its root.",
+            "insert at end and sift up\nextract root and sift down",
+            "O(log n) per update",
+            "O(n)",
+            "Values",
+            "9,3,7,1,6,2,8",
+            input -> binaryHeap(input, BinaryHeap.Type.MAX, false)));
+    demos.add(
+        demo(
+            "Heaps & Advanced Structures",
+            "Priority Queue",
+            "Uses a binary min-heap to insert priorities and repeatedly extract the smallest.",
+            "insert priorities\npeek minimum\nextract in priority order",
+            "O(log n) per update",
+            "O(n)",
+            "Priorities",
+            "7,2,9,1,5,3",
+            input -> binaryHeap(input, BinaryHeap.Type.MIN, true)));
+    demos.add(
+        demo(
+            "Heaps & Advanced Structures",
+            "Binomial Heap",
+            "A forest with at most one binomial tree of each degree; union links equal-degree"
+                + " roots.",
+            "merge root lists by degree\nlink equal-degree trees\nextract minimum root",
+            "O(log n) update",
+            "O(n)",
+            "Values",
+            "12,7,25,3,18,1,9",
+            AlgorithmCatalog::binomialHeap));
+    demos.add(
+        demo(
+            "Heaps & Advanced Structures",
+            "Fibonacci Heap",
+            "Lazy root-list insertion and consolidation on extract-min; decrease-key cuts violating"
+                + " children.",
+            "insert into root list\nextract minimum and consolidate\ndecrease key, cut, cascade",
+            "Amortized O(1) insert/decrease; O(log n) extract",
+            "O(n)",
+            "Values",
+            "12,7,25,3,18,1,9",
+            AlgorithmCatalog::fibonacciHeap));
+  }
+
+  private static void addOptimizationDemos(List<AlgorithmDemo> demos) {
+    demos.add(
+        demo(
+            "Dynamic Programming & Optimization",
+            "0/1 Knapsack",
+            "A table records the best value for every item prefix and capacity.",
+            "for each item and capacity\n"
+                + "  skip item\n"
+                + "  or take it if it fits\n"
+                + "backtrack selected items",
+            "O(nC)",
+            "O(nC)",
+            "weights ; values ; capacity",
+            "2,3,4,5 ; 3,4,5,8 ; 8",
+            AlgorithmCatalog::knapsack));
+    demos.add(
+        demo(
+            "Dynamic Programming & Optimization",
+            "Branch-and-Bound Knapsack",
+            "Best-first search uses the fractional-knapsack bound to prune states that cannot beat"
+                + " the incumbent.",
+            "order by value/weight\nexpand best bound\nprune bound ≤ current best",
+            "Worst O(2ⁿ)",
+            "O(2ⁿ)",
+            "weights ; values ; capacity (≤30 items)",
+            "2,3,4,5 ; 3,4,5,8 ; 8",
+            AlgorithmCatalog::branchBound));
+    demos.add(
+        demo(
+            "Dynamic Programming & Optimization",
+            "Held–Karp TSP",
+            "Subset dynamic programming stores the cheapest path ending at each city. Limited to 18"
+                + " cities.",
+            "dp[subset,last] ← min previous\nclose tour back to city 0\nreconstruct parents",
+            "O(n²2ⁿ)",
+            "O(n2ⁿ)",
+            "Semicolon-separated distance rows",
+            "0,10,15,20;10,0,35,25;15,35,0,30;20,25,30,0",
+            input -> tsp(input, false)));
+    demos.add(
+        demo(
+            "Dynamic Programming & Optimization",
+            "Brute-Force TSP",
+            "Enumerates all tours for comparison. Limited to 10 cities.",
+            "permute cities after city 0\nscore closed tour\nretain the cheapest",
+            "O(n!)",
+            "O(n)",
+            "Semicolon-separated distance rows",
+            "0,10,15,20;10,0,35,25;15,35,0,30;20,25,30,0",
+            input -> tsp(input, true)));
+    demos.add(
+        demo(
+            "Dynamic Programming & Optimization",
+            "Exact Vertex Cover",
+            "Enumerates subsets from smallest to largest. Limited to 24 vertices.",
+            "for subsets by increasing size\n  test every edge is covered\nreturn first cover",
+            "O(2ⁿE)",
+            "O(n)",
+            "Undirected edges",
+            "0-1,1-2,2-0,2-3",
+            input -> vertexCover(input, true)));
+    demos.add(
+        demo(
+            "Dynamic Programming & Optimization",
+            "2-Approximation Vertex Cover",
+            "Picks both endpoints of an uncovered edge, guaranteeing at most twice optimum.",
+            "pick an uncovered edge\nadd both endpoints\nremove incident edges",
+            "O(E²) educational version",
+            "O(E)",
+            "Undirected edges",
+            "0-1,1-2,2-0,2-3",
+            input -> vertexCover(input, false)));
+    demos.add(
+        demo(
+            "Dynamic Programming & Optimization",
+            "Exact Max Cut",
+            "Enumerates both-side assignments and scores crossing edges. Limited to 24 vertices.",
+            "for each partition\n  sum weights of crossing edges\nretain best",
+            "O(2ⁿE)",
+            "O(n)",
+            "Weighted undirected edges",
+            "0-1:2,1-2:3,2-0:1,2-3:4",
+            AlgorithmCatalog::maxCut));
+    demos.add(
+        demo(
+            "Dynamic Programming & Optimization",
+            "Exact MaxSAT",
+            "Enumerates truth assignments and retains the one satisfying most clauses. Limited to"
+                + " 20 UI variables.",
+            "for every assignment\n  evaluate all clauses\nretain best assignment",
+            "O(2ⁿ · clauses)",
+            "O(n)",
+            "Clauses separated by ;, literals like 1,-2",
+            "1,2;-1,2;1,-2;-1,-2,3",
+            AlgorithmCatalog::maxSat));
+    demos.add(
+        demo(
+            "Divide & Conquer / Matrix",
+            "Strassen Matrix Multiplication",
+            "Recursively combines seven half-size products; padding supports non-power-of-two"
+                + " square matrices.",
+            "split A and B into quadrants\ncompute M1…M7 recursively\ncombine result quadrants",
+            "O(n^log₂7)",
+            "O(n²)",
+            "A rows / B rows",
+            "1,2;3,4 / 5,6;7,8",
+            AlgorithmCatalog::strassen));
+  }
+
+  private static void addAnalysisDemos(List<AlgorithmDemo> demos) {
+    demos.add(
+        demo(
+            "Algorithm Analysis",
+            "Runtime Growth",
+            "Compares common asymptotic growth classes on the same n values.",
+            "evaluate 1, log n, n, n log n, n², 2ⁿ",
+            "Interactive",
+            "O(1)",
+            "Maximum n (5–50)",
+            "20",
+            AlgorithmCatalog::growth));
+    demos.add(
+        demo(
+            "Algorithm Analysis",
+            "Master Theorem Explorer",
+            "Evaluates representative T(n)=aT(n/b)+f(n) recurrences and identifies their case.",
+            "compare f(n) with n^(log_b a)\nselect case 1, 2, or 3",
+            "Analysis tool",
+            "O(1)",
+            "a,b,k for f(n)=n^k",
+            "2,2,1",
+            AlgorithmCatalog::masterTheorem));
+    demos.add(
+        demo(
+            "Algorithm Analysis",
+            "Amortized Dynamic Array",
+            "Simulates doubling; expensive resize operations are spread across many constant-time"
+                + " appends.",
+            "if full, allocate double capacity\ncopy existing items\nappend one item",
+            "O(1) amortized append",
+            "O(n)",
+            "Number of appends",
+            "20",
+            AlgorithmCatalog::amortized));
+    demos.add(
+        demo(
+            "Algorithm Analysis",
+            "Randomized Quicksort Experiment",
+            "Repeats quicksort with random pivots and reports the observed average comparison"
+                + " count.",
+            "repeat trials\nshuffle pivot choices\nsum comparisons / trials",
+            "Expected O(n log n)",
+            "O(log n) expected",
+            "values ; trials",
+            "9,1,8,2,7,3,6,4,5,0 ; 50",
+            AlgorithmCatalog::randomizedExperiment));
+  }
+
+  private static AlgorithmDemo graphDemo(
+      String name,
+      String explanation,
+      String pseudo,
+      String time,
+      boolean directed,
+      String input,
+      String operation) {
+    return demo(
+        "Graph Algorithms",
+        name,
+        explanation,
+        pseudo,
+        time,
+        "O(V)",
+        directed
+            ? "Directed edges (>, optional :weight)"
+            : "Undirected edges (-, optional :weight)",
+        input,
+        value -> graph(value, directed, operation));
+  }
+
+  private static AlgorithmDemo demo(
+      String category,
+      String name,
+      String explanation,
+      String pseudo,
+      String time,
+      String space,
+      String hint,
+      String input,
+      java.util.function.Function<String, AlgorithmRun> runner) {
+    return new AlgorithmDemo(category, name, explanation, pseudo, time, space, hint, input, runner);
+  }
+
+  private static AlgorithmRun linearSearch(String input) {
+    Parts p = valuesAndParameter(input);
+    List<AlgorithmStep> s = new ArrayList<>();
+    int found = -1;
+    for (int i = 0; i < p.values.length; i++) {
+      if (p.values[i] == p.parameter) found = i;
+      s.add(
+          arrayStep(
+              "Compare index " + i + " with target " + p.parameter,
+              p.values,
+              Set.of(i),
+              Set.of(),
+              prefix(i),
+              Map.of("Comparisons", i + 1),
+              "Target: " + p.parameter));
+      if (found >= 0) break;
+    }
+    return new AlgorithmRun(s, found < 0 ? "Target not found" : "Found at index " + found);
+  }
+
+  private static AlgorithmRun binarySearch(String input) {
+    Parts p = valuesAndParameter(input);
+    int[] a = p.values;
+    List<AlgorithmStep> s = new ArrayList<>();
+    int low = 0, high = a.length - 1, found = -1, comparisons = 0;
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      comparisons++;
+      s.add(
+          arrayStep(
+              "Inspect middle index " + mid,
+              a,
+              Set.of(mid),
+              rangeSet(low, high),
+              outside(low, high, a.length),
+              Map.of("Comparisons", comparisons, "Interval size", high - low + 1),
+              "Target: " + p.parameter));
+      if (a[mid] == p.parameter) {
+        found = mid;
+        break;
+      }
+      if (a[mid] < p.parameter) low = mid + 1;
+      else high = mid - 1;
+    }
+    return new AlgorithmRun(s, found < 0 ? "Target not found" : "Found at index " + found);
+  }
+
+  private static AlgorithmRun selection(String input, boolean deterministic) {
+    Parts p = valuesAndParameter(input);
+    int result =
+        deterministic
+            ? SearchAlgorithms.medianOfMediansSelect(p.values, p.parameter)
+            : SearchAlgorithms.quickselect(p.values, p.parameter);
+    List<AlgorithmStep> s =
+        List.of(
+            arrayStep(
+                "Partitioning identifies rank " + p.parameter,
+                p.values,
+                Set.of(p.parameter),
+                Set.of(),
+                Set.of(),
+                Map.of("Requested rank", p.parameter),
+                "Selected value: " + result));
+    return new AlgorithmRun(s, "Rank " + p.parameter + " contains " + result);
+  }
+
+  private static AlgorithmRun stringMatch(String input, String method) {
+    String[] p = input.split(";", 2);
+    if (p.length < 2) throw new IllegalArgumentException("Use: text ; pattern");
+    String text = p[0].trim(), pattern = p[1].trim();
+    if (text.length() > 500 || pattern.length() > 100)
+      throw new IllegalArgumentException(
+          "String visualization is limited to 500 text and 100 pattern characters");
+    List<Integer> matches =
+        switch (method) {
+          case "naive" -> StringAlgorithms.naive(text, pattern);
+          case "kmp" -> StringAlgorithms.kmp(text, pattern);
+          default -> StringAlgorithms.rabinKarp(text, pattern);
+        };
+    List<AlgorithmStep> s = new ArrayList<>();
+    for (int i = 0; i <= Math.max(0, text.length() - pattern.length()); i++)
+      s.add(
+          new AlgorithmStep(
+              "Align pattern at index " + i,
+              "align pattern\ncompare characters\nshift using algorithm rule",
+              1,
+              TEXT,
+              List.of(),
+              chars(text),
+              rangeSet(i, Math.min(text.length() - 1, i + pattern.length() - 1)),
+              matches.contains(i) ? rangeSet(i, i + pattern.length() - 1) : Set.of(),
+              Set.copyOf(matches),
+              List.of(),
+              Map.of("Alignments", i + 1, "Matches", countThrough(matches, i)),
+              "Pattern: "
+                  + pattern
+                  + (method.equals("kmp")
+                      ? "\nPrefix table: " + Arrays.toString(StringAlgorithms.prefixTable(pattern))
+                      : "")));
+    return new AlgorithmRun(s, "Match positions: " + matches);
+  }
+
+  private static AlgorithmRun hashDemo(String input, EducationalHashTable.Strategy strategy) {
+    EducationalHashTable table = new EducationalHashTable(11, strategy);
+    List<AlgorithmStep> s = new ArrayList<>();
+    int collisions = 0;
+    String[] operations = input.split(",");
+    if (operations.length > 100)
+      throw new IllegalArgumentException("Hash visualization is limited to 100 operations");
+    for (String raw : operations) {
+      String token = raw.trim();
+      if (token.isEmpty()) continue;
+      EducationalHashTable.OperationResult r;
+      if (token.startsWith("?")) r = table.search(Integer.parseInt(token.substring(1)));
+      else if (token.startsWith("-")) r = table.delete(Integer.parseInt(token.substring(1)));
+      else r = table.insert(Integer.parseInt(token));
+      collisions += r.collisions();
+      s.add(
+          new AlgorithmStep(
+              r.message(),
+              "hash key\nfollow collision strategy\nperform operation",
+              1,
+              TABLE,
+              List.of(),
+              table.snapshot(),
+              Set.copyOf(r.probes()),
+              Set.of(r.hash()),
+              Set.of(),
+              List.of(),
+              Map.of("Hash", r.hash(), "Probes", r.probes().size(), "Collisions", collisions),
+              "Operation: " + token));
+    }
+    return new AlgorithmRun(s, "Table: " + table.snapshot());
+  }
+
+  private static AlgorithmRun graph(String input, boolean directed, String op) {
+    GraphAlgorithms.Graph g = parseGraph(input, directed);
+    List<Integer> order = new ArrayList<>();
+    String result;
+    Set<Integer> special = Set.of();
+    Map<String, Number> stats = new LinkedHashMap<>();
+    switch (op) {
+      case "bfs" -> {
+        order = GraphAlgorithms.bfs(g, 0);
+        result = "BFS order: " + order;
+      }
+      case "dfs" -> {
+        order = GraphAlgorithms.dfs(g, 0);
+        result = "DFS order: " + order;
+      }
+      case "components" -> {
+        var c = GraphAlgorithms.connectedComponents(g);
+        for (Set<Integer> x : c) order.addAll(x);
+        result = "Components: " + c;
+        stats.put("Components", c.size());
+      }
+      case "topological" -> {
+        order = GraphAlgorithms.topologicalSort(g);
+        result = "Topological order: " + order;
+      }
+      case "scc" -> {
+        var c = GraphAlgorithms.stronglyConnectedComponents(g);
+        for (Set<Integer> x : c) order.addAll(x);
+        result = "Strong components: " + c;
+        stats.put("Components", c.size());
+      }
+      case "dijkstra" -> {
+        var sp = GraphAlgorithms.dijkstra(g, 0);
+        for (int i = 0; i < g.vertices(); i++)
+          if (sp.distance()[i] < GraphAlgorithms.INF) order.add(i);
+        result = "Distances: " + distanceText(sp.distance());
+        stats.put("Relaxed/reachable", order.size());
+      }
+      case "bellman" -> {
+        var sp = GraphAlgorithms.bellmanFord(g, 0);
+        for (int i = 0; i < g.vertices(); i++)
+          if (sp.distance()[i] < GraphAlgorithms.INF) order.add(i);
+        result =
+            "Distances: "
+                + distanceText(sp.distance())
+                + (sp.negativeCycle() ? "; negative cycle detected" : "");
+        stats.put("Negative cycle", sp.negativeCycle() ? 1 : 0);
+      }
+      case "kruskal" -> {
+        var mst = GraphAlgorithms.kruskal(g);
+        order =
+            mst.edges().stream()
+                .flatMap(e -> java.util.stream.Stream.of(e.from(), e.to()))
+                .distinct()
+                .toList();
+        special = Set.copyOf(order);
+        result = "MST weight: " + mst.totalWeight() + ", edges: " + mst.edges();
+        stats.put("MST weight", mst.totalWeight());
+      }
+      case "prim" -> {
+        var mst = GraphAlgorithms.prim(g, 0);
+        order =
+            mst.edges().stream()
+                .flatMap(e -> java.util.stream.Stream.of(e.from(), e.to()))
+                .distinct()
+                .toList();
+        special = Set.copyOf(order);
+        result = "MST weight: " + mst.totalWeight() + ", edges: " + mst.edges();
+        stats.put("MST weight", mst.totalWeight());
+      }
+      default -> throw new IllegalArgumentException(op);
+    }
+    List<AlgorithmStep> s = new ArrayList<>();
+    Set<Integer> visited = new LinkedHashSet<>();
+    for (int i = 0; i < Math.max(1, order.size()); i++) {
+      if (!order.isEmpty()) visited.add(order.get(i));
+      Map<String, Number> frameStats = new LinkedHashMap<>(stats);
+      frameStats.put("Visited", visited.size());
+      s.add(
+          graphStep(
+              (order.isEmpty() ? "No reachable vertex" : "Process vertex " + order.get(i)),
+              g,
+              order.isEmpty() ? Set.of() : Set.of(order.get(i)),
+              special,
+              visited,
+              frameStats,
+              result));
+    }
+    return new AlgorithmRun(s, result);
+  }
+
+  private static AlgorithmRun unionFind(String input) {
+    List<int[]> pairs = new ArrayList<>();
+    int max = 0;
+    for (String t : input.split(",")) {
+      String[] p = t.trim().split("-");
+      int a = Integer.parseInt(p[0]), b = Integer.parseInt(p[1]);
+      pairs.add(new int[] {a, b});
+      max = Math.max(max, Math.max(a, b));
+    }
+    UnionFind uf = new UnionFind(max + 1);
+    List<AlgorithmStep> s = new ArrayList<>();
+    for (int[] p : pairs) {
+      uf.union(p[0], p[1]);
+      int[] parents = uf.parents();
+      s.add(
+          new AlgorithmStep(
+              "Union(" + p[0] + ", " + p[1] + ")",
+              "find both roots\nattach lower rank root\ncompress paths",
+              1,
+              TREE,
+              Arrays.stream(parents).boxed().toList(),
+              labels(parents.length),
+              Set.of(p[0], p[1]),
+              Set.of(),
+              Set.of(),
+              List.of(),
+              Map.of("Sets", countRoots(uf, parents.length)),
+              uf.toString()));
+    }
+    return new AlgorithmRun(s, uf.toString());
+  }
+
+  private static AlgorithmRun maxFlow(String ignored) {
+    int[][] c = {
+      {0, 16, 13, 0, 0, 0},
+      {0, 0, 10, 12, 0, 0},
+      {0, 4, 0, 0, 14, 0},
+      {0, 0, 9, 0, 0, 20},
+      {0, 0, 0, 7, 0, 4},
+      {0, 0, 0, 0, 0, 0}
+    };
+    var r = GraphAlgorithms.edmondsKarp(c, 0, 5);
+    GraphAlgorithms.Graph g = capacityGraph(c);
+    Set<Integer> source = new LinkedHashSet<>();
+    for (int i = 0; i < r.sourceSideOfMinCut().length; i++)
+      if (r.sourceSideOfMinCut()[i]) source.add(i);
+    return new AlgorithmRun(
+        List.of(
+            graphStep(
+                "Maximum flow complete; partitions show the minimum cut",
+                g,
+                Set.of(0, 5),
+                source,
+                rangeSet(0, 5),
+                Map.of("Maximum flow", r.maximumFlow(), "Source-side vertices", source.size()),
+                "Residual network computed by Edmonds–Karp")),
+        "Maximum flow = minimum cut capacity = " + r.maximumFlow());
+  }
+
+  private static AlgorithmRun matching(String input) {
+    String[] rows = input.trim().split("/");
+    boolean[][] e = new boolean[rows.length][];
+    for (int i = 0; i < rows.length; i++) {
+      e[i] = new boolean[rows[i].length()];
+      for (int j = 0; j < e[i].length; j++) e[i][j] = rows[i].charAt(j) == '1';
+    }
+    int count = GraphAlgorithms.maximumBipartiteMatching(e);
+    List<String> labels = new ArrayList<>();
+    for (int i = 0; i < rows.length; i++) labels.add("L" + i);
+    for (int j = 0; j < (rows.length == 0 ? 0 : e[0].length); j++) labels.add("R" + j);
+    List<AlgorithmStep.VisualEdge> edges = new ArrayList<>();
+    for (int i = 0; i < e.length; i++)
+      for (int j = 0; j < e[i].length; j++)
+        if (e[i][j]) edges.add(new AlgorithmStep.VisualEdge(i, rows.length + j, 1, false, ""));
+    return new AlgorithmRun(
+        List.of(
+            new AlgorithmStep(
+                "Search augmenting paths",
+                "for each left vertex\nfind augmenting path\nflip matching",
+                1,
+                GRAPH,
+                List.of(),
+                labels,
+                rangeSet(0, rows.length - 1),
+                rangeSet(rows.length, labels.size() - 1),
+                Set.of(),
+                edges,
+                Map.of("Matching size", count),
+                "Left and right partitions")),
+        "Maximum matching size: " + count);
+  }
+
+  private static AlgorithmRun grid(String input, GridPathfinding.Method method) {
+    String[] rows = input.trim().split("/");
+    if (rows.length == 0) throw new IllegalArgumentException("empty grid");
+    if ((long) rows.length * rows[0].length() > 2_500)
+      throw new IllegalArgumentException("Grid visualization is limited to 2,500 cells");
+    boolean[][] walls = new boolean[rows.length][rows[0].length()];
+    GridPathfinding.Cell start = null, target = null;
+    for (int r = 0; r < rows.length; r++) {
+      if (rows[r].length() != rows[0].length())
+        throw new IllegalArgumentException("grid rows differ");
+      for (int c = 0; c < rows[r].length(); c++) {
+        char symbol = rows[r].charAt(c);
+        if (symbol != '.' && symbol != '#' && symbol != 'S' && symbol != 'T')
+          throw new IllegalArgumentException("grid uses only ., #, S, and T");
+        walls[r][c] = symbol == '#';
+        if (symbol == 'S') start = new GridPathfinding.Cell(r, c);
+        if (symbol == 'T') target = new GridPathfinding.Cell(r, c);
+      }
+    }
+    if (start == null) start = new GridPathfinding.Cell(0, 0);
+    if (target == null) target = new GridPathfinding.Cell(rows.length - 1, rows[0].length() - 1);
+    var result = GridPathfinding.find(walls, start, target, method);
+    List<Integer> values = new ArrayList<>();
+    List<String> labels = new ArrayList<>();
+    for (String row : rows)
+      for (char c : row.toCharArray()) {
+        values.add(c == '#' ? 1 : 0);
+        labels.add(String.valueOf(c));
+      }
+    int startId = start.row() * rows[0].length() + start.column(),
+        targetId = target.row() * rows[0].length() + target.column();
+    List<AlgorithmStep> s = new ArrayList<>();
+    Set<Integer> visited = new LinkedHashSet<>();
+    for (var cell : result.visited()) {
+      visited.add(cell.row() * rows[0].length() + cell.column());
+      s.add(
+          new AlgorithmStep(
+              "Visit cell (" + cell.row() + ", " + cell.column() + ")",
+              "take frontier cell\nvisit passable neighbors\nrecord parent",
+              1,
+              GRID,
+              values,
+              labels,
+              Set.of(cell.row() * rows[0].length() + cell.column()),
+              Set.of(startId, targetId),
+              visited,
+              List.of(),
+              Map.of("Visited", visited.size(), "Path length", Math.max(0, result.cost())),
+              rows.length + " × " + rows[0].length() + " grid"));
+    }
+    Set<Integer> path = new LinkedHashSet<>();
+    for (var cell : result.path()) path.add(cell.row() * rows[0].length() + cell.column());
+    if (!s.isEmpty()) {
+      AlgorithmStep last = s.get(s.size() - 1);
+      s.add(
+          new AlgorithmStep(
+              "Final path reconstructed",
+              last.pseudocode(),
+              2,
+              GRID,
+              values,
+              labels,
+              path,
+              Set.of(startId, targetId),
+              visited,
+              List.of(),
+              Map.of("Visited", visited.size(), "Path length", Math.max(0, result.cost())),
+              "Path: " + result.path()));
+    }
+    return new AlgorithmRun(s, result.cost() < 0 ? "No path" : "Path length: " + result.cost());
+  }
+
+  private static AlgorithmRun treeTraversal(String input, String traversal) {
+    BinarySearchTree tree = makeBst(numbersLimited(input, 100, "tree"));
+    List<Integer> order =
+        switch (traversal) {
+          case "Preorder" -> tree.preorder();
+          case "Inorder" -> tree.inorder();
+          case "Postorder" -> tree.postorder();
+          default -> tree.levelOrder();
+        };
+    return treeFrames(tree, order, traversal + " traversal: " + order);
+  }
+
+  private static AlgorithmRun bst(String input) {
+    BinarySearchTree tree = new BinarySearchTree();
+    List<AlgorithmStep> s = new ArrayList<>();
+    String result = "";
+    String[] operations = input.split(",");
+    if (operations.length > 100)
+      throw new IllegalArgumentException("Tree visualization is limited to 100 operations");
+    for (String raw : operations) {
+      String t = raw.trim();
+      if (t.startsWith("?")) {
+        int key = Integer.parseInt(t.substring(1));
+        result = "Search " + key + ": " + tree.contains(key);
+        s.add(
+            treeStep(
+                "Search for " + key,
+                tree.levelOrder(),
+                Set.of(key),
+                Map.of("Nodes", tree.inorder().size()),
+                result));
+      } else if (t.startsWith("-")) {
+        int key = Integer.parseInt(t.substring(1));
+        tree.delete(key);
+        result = "Deleted " + key;
+        s.add(
+            treeStep(
+                result,
+                tree.levelOrder(),
+                Set.of(),
+                Map.of("Nodes", tree.inorder().size()),
+                "Inorder: " + tree.inorder()));
+      } else {
+        int key = Integer.parseInt(t);
+        tree.insert(key);
+        result = "Inserted " + key;
+        s.add(
+            treeStep(
+                result,
+                tree.levelOrder(),
+                Set.of(key),
+                Map.of("Nodes", tree.inorder().size()),
+                "Inorder: " + tree.inorder()));
+      }
+    }
+    return new AlgorithmRun(s, result + "; inorder " + tree.inorder());
+  }
+
+  private static AlgorithmRun redBlack(String input) {
+    RedBlackTree tree = new RedBlackTree();
+    List<AlgorithmStep> s = new ArrayList<>();
+    for (int key : numbersLimited(input, 100, "red-black tree")) {
+      tree.insert(key);
+      List<RedBlackTree.NodeView> nodes = tree.levelOrder();
+      List<Integer> values = nodes.stream().map(RedBlackTree.NodeView::key).toList();
+      Set<Integer> red = new LinkedHashSet<>(), black = new LinkedHashSet<>();
+      for (int i = 0; i < nodes.size(); i++)
+        if (nodes.get(i).color() == RedBlackTree.Color.RED) red.add(i);
+        else black.add(i);
+      s.add(
+          new AlgorithmStep(
+              "Insert " + key + "; repair colors/rotations",
+              "BST insert red node\nrecolor red uncle or rotate\ncolor root black",
+              1,
+              TREE,
+              values,
+              List.of(),
+              Set.of(values.indexOf(key)),
+              red,
+              black,
+              List.of(),
+              Map.of(
+                  "Nodes", values.size(), "Rotations", tree.rotations(), "Red nodes", red.size()),
+              "red-black tree\nInvariants: " + tree.invariantsHold()));
+    }
+    return new AlgorithmRun(
+        s, "Inorder: " + tree.inorder() + "; invariants hold: " + tree.invariantsHold());
+  }
+
+  private static AlgorithmRun bTree(String input) {
+    BTree tree = new BTree(2);
+    List<AlgorithmStep> s = new ArrayList<>();
+    for (int key : numbersLimited(input, 100, "B-tree")) {
+      tree.insert(key);
+      s.add(
+          new AlgorithmStep(
+              "Insert " + key + (tree.splits() > 0 ? "; split full nodes as required" : ""),
+              "split full root\ndescend and split full child\ninsert key in leaf",
+              1,
+              TREE,
+              tree.inOrder(),
+              List.of(),
+              Set.of(key),
+              Set.of(),
+              Set.of(),
+              List.of(),
+              Map.of("Keys", tree.inOrder().size(), "Splits", tree.splits()),
+              "Balanced invariants: " + tree.invariantsHold()));
+    }
+    return new AlgorithmRun(s, "Sorted keys: " + tree.inOrder());
+  }
+
+  private static AlgorithmRun binaryHeap(String input, BinaryHeap.Type type, boolean drain) {
+    BinaryHeap heap = new BinaryHeap(type);
+    List<AlgorithmStep> s = new ArrayList<>();
+    int[] source = numbersLimited(input, 100, "heap");
+    if (type == BinaryHeap.Type.MAX && !drain) {
+      heap.heapify(Arrays.stream(source).boxed().toList());
+      s.add(
+          treeStep(
+              "Bottom-up heapify",
+              heap.array(),
+              Set.of(),
+              Map.of("Heap size", heap.size()),
+              "Array representation: " + heap.array()));
+    } else
+      for (int value : source) {
+        heap.insert(value);
+        s.add(
+            treeStep(
+                "Insert " + value + " and sift up",
+                heap.array(),
+                Set.of(value),
+                Map.of("Heap size", heap.size()),
+                "Array representation: " + heap.array()));
+      }
+    if (!drain && !heap.isEmpty()) {
+      int index = heap.size() - 1, newPriority = type == BinaryHeap.Type.MIN ? -50 : 150;
+      heap.changePriority(index, newPriority);
+      s.add(
+          treeStep(
+              "Change priority at index " + index + " to " + newPriority,
+              heap.array(),
+              Set.of(newPriority),
+              Map.of("Heap size", heap.size()),
+              "Array representation: " + heap.array()));
+    }
+    if (drain)
+      while (!heap.isEmpty()) {
+        int v = heap.extract();
+        s.add(
+            treeStep(
+                "Extract priority " + v + " and sift down",
+                heap.array(),
+                Set.of(),
+                Map.of("Heap size", heap.size()),
+                "Extracted: " + v + "\nArray representation: " + heap.array()));
+      }
+    return new AlgorithmRun(
+        s, drain ? "Priority queue drained in sorted order" : "Heap array: " + heap.array());
+  }
+
+  private static AlgorithmRun binomialHeap(String input) {
+    BinomialHeap heap = new BinomialHeap();
+    List<AlgorithmStep> s = new ArrayList<>();
+    for (int v : numbersLimited(input, 100, "binomial heap")) {
+      heap.insert(v);
+      s.add(
+          treeStep(
+              "Insert " + v + "; link trees of equal degree",
+              heap.rootDegrees(),
+              Set.of(),
+              Map.of("Size", heap.size(), "Root trees", heap.rootDegrees().size()),
+              "Root degrees: " + heap.rootDegrees() + "; minimum: " + heap.findMinimum()));
+    }
+    int min = heap.extractMinimum();
+    s.add(
+        treeStep(
+            "Extract minimum " + min + " and union child forest",
+            heap.rootDegrees(),
+            Set.of(),
+            Map.of("Size", heap.size()),
+            "Invariant: " + heap.invariantHolds()));
+    return new AlgorithmRun(s, "Extracted " + min + "; remaining size " + heap.size());
+  }
+
+  private static AlgorithmRun fibonacciHeap(String input) {
+    FibonacciHeap heap = new FibonacciHeap();
+    List<AlgorithmStep> s = new ArrayList<>();
+    FibonacciHeap.Node decrease = null;
+    for (int v : numbersLimited(input, 100, "Fibonacci heap")) {
+      FibonacciHeap.Node node = heap.insert(v);
+      if (decrease == null) decrease = node;
+      s.add(
+          treeStep(
+              "Insert " + v + " into circular root list",
+              heap.rootKeys(),
+              Set.of(v),
+              Map.of("Size", heap.size(), "Roots", heap.rootKeys().size()),
+              "Minimum: " + heap.findMinimum()));
+    }
+    int min = heap.extractMinimum();
+    s.add(
+        treeStep(
+            "Extract " + min + " and consolidate equal-degree roots",
+            heap.rootKeys(),
+            Set.of(),
+            Map.of("Size", heap.size(), "Roots", heap.rootKeys().size()),
+            "Invariant: " + heap.invariantHolds()));
+    if (decrease != null && decrease.key != min) {
+      int lowered = heap.findMinimum() - 5;
+      heap.decreaseKey(decrease, lowered);
+      s.add(
+          treeStep(
+              "Decrease key and cut if heap order is violated",
+              heap.rootKeys(),
+              Set.of(lowered),
+              Map.of("Size", heap.size(), "Roots", heap.rootKeys().size()),
+              "Minimum pointer: " + heap.findMinimum() + "; invariant: " + heap.invariantHolds()));
+    }
+    return new AlgorithmRun(s, "Extracted " + min + "; new minimum " + heap.findMinimum());
+  }
+
+  private static AlgorithmRun knapsack(String input) {
+    String[] p = input.split(";");
+    if (p.length != 3) throw new IllegalArgumentException("Use weights ; values ; capacity");
+    int[] w = numbers(p[0]), v = numbers(p[1]);
+    int c = Integer.parseInt(p[2].trim());
+    if (w.length > 100 || c > 500)
+      throw new IllegalArgumentException(
+          "Knapsack visualization is limited to 100 items and capacity 500");
+    var r = OptimizationAlgorithms.knapsack(w, v, c);
+    List<AlgorithmStep> s = new ArrayList<>();
+    for (int item = 1; item < r.table().length; item++)
+      s.add(
+          tableStep(
+              "Compute DP row for item " + item,
+              r.table(),
+              item,
+              Map.of("Items considered", item, "Best value", r.table()[item][c]),
+              "Capacity " + c));
+    return new AlgorithmRun(
+        s, "Maximum value " + r.maximumValue() + "; selected item indices " + r.selectedItems());
+  }
+
+  private static AlgorithmRun branchBound(String input) {
+    String[] p = input.split(";");
+    if (p.length != 3) throw new IllegalArgumentException("Use weights ; values ; capacity");
+    int[] weights = numbers(p[0]);
+    if (weights.length > 20)
+      throw new IllegalArgumentException("Branch-and-bound visualization is limited to 20 items");
+    var r =
+        OptimizationAlgorithms.branchAndBoundKnapsack(
+            weights, numbers(p[1]), Integer.parseInt(p[2].trim()));
+    return new AlgorithmRun(
+        List.of(
+            AlgorithmStep.text(
+                "Best-first search completed",
+                "Selected items: " + r.selectedItems(),
+                Map.of("Best value", r.maximumValue()))),
+        "Maximum value " + r.maximumValue());
+  }
+
+  private static AlgorithmRun tsp(String input, boolean brute) {
+    int[][] d = matrix(input);
+    int limit = brute ? 9 : 12;
+    if (d.length > limit)
+      throw new IllegalArgumentException(
+          "This TSP visualization is limited to " + limit + " cities");
+    var r = brute ? OptimizationAlgorithms.bruteForceTsp(d) : OptimizationAlgorithms.heldKarp(d);
+    GraphAlgorithms.Graph g = completeGraph(d);
+    List<AlgorithmStep> s = new ArrayList<>();
+    Set<Integer> visited = new LinkedHashSet<>();
+    for (int city : r.tour()) {
+      visited.add(city);
+      s.add(
+          graphStep(
+              "Extend tour to city " + city,
+              g,
+              Set.of(city),
+              Set.of(),
+              visited,
+              Map.of("States examined", r.statesExamined(), "Tour cost", r.cost()),
+              "Tour: " + r.tour()));
+    }
+    return new AlgorithmRun(s, "Tour " + r.tour() + " costs " + r.cost());
+  }
+
+  private static AlgorithmRun vertexCover(String input, boolean exact) {
+    GraphAlgorithms.Graph g = parseGraph(input, false);
+    var r =
+        exact
+            ? OptimizationAlgorithms.exactVertexCover(g.vertices(), g.edges())
+            : OptimizationAlgorithms.approximateVertexCover(g.vertices(), g.edges());
+    var optimal = exact ? r : OptimizationAlgorithms.exactVertexCover(g.vertices(), g.edges());
+    double ratio =
+        optimal.vertices().isEmpty() ? 1 : r.vertices().size() / (double) optimal.vertices().size();
+    return new AlgorithmRun(
+        List.of(
+            graphStep(
+                "Selected cover vertices",
+                g,
+                r.vertices(),
+                Set.of(),
+                r.vertices(),
+                Map.of(
+                    "Cover size",
+                    r.vertices().size(),
+                    "Optimum",
+                    optimal.vertices().size(),
+                    "Ratio",
+                    ratio),
+                "Every edge touches a selected vertex")),
+        "Cover " + r.vertices() + "; ratio " + String.format("%.2f", ratio));
+  }
+
+  private static AlgorithmRun maxCut(String input) {
+    GraphAlgorithms.Graph g = parseGraph(input, false);
+    var r = OptimizationAlgorithms.exactMaxCut(g.vertices(), g.edges());
+    return new AlgorithmRun(
+        List.of(
+            graphStep(
+                "Best partition found",
+                g,
+                r.left(),
+                r.right(),
+                rangeSet(0, g.vertices() - 1),
+                Map.of("Crossing weight", r.weight()),
+                "Left " + r.left() + " | Right " + r.right())),
+        "Maximum cut weight: " + r.weight());
+  }
+
+  private static AlgorithmRun maxSat(String input) {
+    String[] parts = input.split(";");
+    List<int[]> clauses = new ArrayList<>();
+    int variables = 0;
+    for (String part : parts) {
+      int[] c = numbers(part);
+      for (int x : c) variables = Math.max(variables, Math.abs(x));
+      clauses.add(c);
+    }
+    if (variables > 18) throw new IllegalArgumentException("UI MaxSAT limit is 18 variables");
+    var r = OptimizationAlgorithms.exactMaxSat(variables, clauses);
+    List<String> labels = new ArrayList<>();
+    for (int i = 0; i < variables; i++) labels.add("x" + (i + 1) + " = " + r.assignment()[i]);
+    return new AlgorithmRun(
+        List.of(
+            new AlgorithmStep(
+                "Best assignment",
+                "enumerate assignments\nevaluate clauses\nretain best",
+                1,
+                SETS,
+                List.of(),
+                labels,
+                rangeSet(0, variables - 1),
+                Set.of(),
+                Set.of(),
+                List.of(),
+                Map.of("Satisfied clauses", r.satisfiedClauses(), "Total clauses", clauses.size()),
+                "Assignment: " + Arrays.toString(r.assignment()))),
+        r.satisfiedClauses() + " / " + clauses.size() + " clauses satisfied");
+  }
+
+  private static AlgorithmRun strassen(String input) {
+    String[] p = input.split("/", 2);
+    if (p.length != 2) throw new IllegalArgumentException("Use A / B");
+    int[][] a = matrix(p[0]), b = matrix(p[1]), r = MatrixAlgorithms.strassen(a, b);
+    return new AlgorithmRun(
+        List.of(
+            matrixStep(
+                "Divide matrices into quadrants",
+                a,
+                Map.of("Matrix size", a.length),
+                "Seven recursive products"),
+            matrixStep(
+                "Combine M1 through M7",
+                r,
+                Map.of("Scalar entries", r.length * r.length),
+                "Result matches ordinary multiplication: "
+                    + Arrays.deepEquals(r, MatrixAlgorithms.ordinaryMultiply(a, b)))),
+        "Product: " + Arrays.deepToString(r));
+  }
+
+  private static AlgorithmRun growth(String input) {
+    int n = Math.max(5, Math.min(50, Integer.parseInt(input.trim())));
+    List<Integer> values = new ArrayList<>();
+    List<String> labels = new ArrayList<>();
+    for (int i = 1; i <= n; i++) {
+      values.add((int) Math.min(10000, i * i));
+      labels.add(Integer.toString(i));
+    }
+    return new AlgorithmRun(
+        List.of(
+            new AlgorithmStep(
+                "Growth curves sampled through n = " + n,
+                "1, log n, n, n log n, n², 2ⁿ",
+                0,
+                ARRAY,
+                values,
+                labels,
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                List.of(),
+                Map.of("n", n, "n log₂ n", (int) (n * Math.log(n) / Math.log(2)), "n²", n * n),
+                "Exponential growth quickly leaves the visible scale.")),
+        "Compared six common growth classes through n=" + n);
+  }
+
+  private static AlgorithmRun masterTheorem(String input) {
+    int[] p = numbers(input);
+    if (p.length != 3 || p[0] <= 0 || p[1] <= 1) throw new IllegalArgumentException("Use a,b,k");
+    double critical = Math.log(p[0]) / Math.log(p[1]);
+    String result =
+        Math.abs(p[2] - critical) < 1e-9
+            ? "Case 2: Θ(n^" + p[2] + " log n)"
+            : p[2] < critical
+                ? "Case 1: Θ(n^" + String.format("%.2f", critical) + ")"
+                : "Case 3: Θ(n^" + p[2] + ") (regularity assumed)";
+    return new AlgorithmRun(
+        List.of(
+            AlgorithmStep.text(
+                "Compare k with log_b(a)",
+                "k = "
+                    + p[2]
+                    + ", log_"
+                    + p[1]
+                    + "("
+                    + p[0]
+                    + ") = "
+                    + String.format("%.3f", critical),
+                Map.of("a", p[0], "b", p[1], "k", p[2])),
+            AlgorithmStep.text("Master Theorem result", result, Map.of())),
+        result);
+  }
+
+  private static AlgorithmRun amortized(String input) {
+    int count = Math.max(1, Math.min(200, Integer.parseInt(input.trim()))),
+        capacity = 1,
+        copies = 0;
+    List<AlgorithmStep> s = new ArrayList<>();
+    List<Integer> a = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      boolean resized = i == capacity;
+      if (resized) {
+        copies += i;
+        capacity *= 2;
+      }
+      a.add(i);
+      s.add(
+          arrayStep(
+              (resized
+                  ? "Capacity full: copy " + i + " entries, then append"
+                  : "Append without resizing"),
+              a.stream().mapToInt(Integer::intValue).toArray(),
+              Set.of(i),
+              Set.of(),
+              Set.of(),
+              Map.of("Size", i + 1, "Capacity", capacity, "Total copies", copies),
+              "Amortized work per append: "
+                  + String.format("%.2f", (copies + count) / (double) (i + 1))));
+    }
+    return new AlgorithmRun(s, "Total append writes + copies: " + (count + copies));
+  }
+
+  private static AlgorithmRun randomizedExperiment(String input) {
+    Parts p = valuesAndParameter(input);
+    int trials = Math.max(1, Math.min(1000, p.parameter));
+    long total = 0, min = Long.MAX_VALUE, max = 0;
+    List<AlgorithmStep> s = new ArrayList<>();
+    for (int i = 0; i < trials; i++) {
+      long c =
+          SortAlgorithms.run(p.values, SortAlgorithms.Kind.RANDOMIZED_QUICK, i * 7919L + 17)
+              .comparisons();
+      total += c;
+      min = Math.min(min, c);
+      max = Math.max(max, c);
+      if (i < 50 || i == trials - 1)
+        s.add(
+            arrayStep(
+                "Trial " + (i + 1) + " uses new random pivots",
+                p.values,
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                Map.of("Trial", i + 1, "Comparisons", c, "Running average", total / (i + 1)),
+                "Deterministic input; randomized pivot choices"));
+    }
+    return new AlgorithmRun(
+        s,
+        "Average comparisons: "
+            + String.format("%.2f", total / (double) trials)
+            + " (min "
+            + min
+            + ", max "
+            + max
+            + ")");
+  }
+
+  private static AlgorithmStep arrayStep(
+      String m,
+      int[] a,
+      Set<Integer> active,
+      Set<Integer> secondary,
+      Set<Integer> complete,
+      Map<String, Number> stats,
+      String details) {
+    return new AlgorithmStep(
+        m,
+        "inspect active item\nupdate state\ncontinue",
+        1,
+        ARRAY,
+        Arrays.stream(a).boxed().toList(),
+        List.of(),
+        active,
+        secondary,
+        complete,
+        List.of(),
+        stats,
+        details);
+  }
+
+  private static AlgorithmStep treeStep(
+      String m,
+      List<Integer> values,
+      Set<Integer> activeValues,
+      Map<String, Number> stats,
+      String details) {
+    Set<Integer> active = new LinkedHashSet<>();
+    for (int i = 0; i < values.size(); i++) if (activeValues.contains(values.get(i))) active.add(i);
+    return new AlgorithmStep(
+        m,
+        "compare / update structure\nrestore invariant",
+        1,
+        TREE,
+        values,
+        List.of(),
+        active,
+        Set.of(),
+        Set.of(),
+        List.of(),
+        stats,
+        details);
+  }
+
+  private static AlgorithmStep graphStep(
+      String m,
+      GraphAlgorithms.Graph g,
+      Set<Integer> a,
+      Set<Integer> b,
+      Set<Integer> done,
+      Map<String, Number> stats,
+      String details) {
+    List<AlgorithmStep.VisualEdge> edges =
+        g.edges().stream()
+            .map(
+                e ->
+                    new AlgorithmStep.VisualEdge(
+                        e.from(), e.to(), e.weight(), g.directed(), Integer.toString(e.weight())))
+            .toList();
+    return new AlgorithmStep(
+        m,
+        "select next vertex or edge\nupdate frontier and labels\nrecord completed state",
+        1,
+        GRAPH,
+        List.of(),
+        labels(g.vertices()),
+        a,
+        b,
+        done,
+        edges,
+        stats,
+        details);
+  }
+
+  private static AlgorithmStep tableStep(
+      String m, int[][] table, int activeRow, Map<String, Number> stats, String details) {
+    List<Integer> values = new ArrayList<>();
+    List<String> labels = new ArrayList<>();
+    for (int r = 0; r < table.length; r++)
+      for (int c = 0; c < table[r].length; c++) {
+        values.add(table[r][c]);
+        labels.add(Integer.toString(table[r][c]));
+      }
+    int cols = table.length == 0 ? 0 : table[0].length;
+    return new AlgorithmStep(
+        m,
+        "skip item\nor take item if it fits\nstore the better value",
+        1,
+        TABLE,
+        values,
+        labels,
+        rangeSet(activeRow * cols, (activeRow + 1) * cols - 1),
+        Set.of(),
+        Set.of(),
+        List.of(),
+        stats,
+        details + "\ncolumns=" + cols);
+  }
+
+  private static AlgorithmStep matrixStep(
+      String m, int[][] matrix, Map<String, Number> stats, String details) {
+    List<Integer> v = new ArrayList<>();
+    List<String> l = new ArrayList<>();
+    for (int[] row : matrix)
+      for (int x : row) {
+        v.add(x);
+        l.add(Integer.toString(x));
+      }
+    return new AlgorithmStep(
+        m,
+        "split\nrecurse\ncombine",
+        1,
+        TABLE,
+        v,
+        l,
+        Set.of(),
+        Set.of(),
+        Set.of(),
+        List.of(),
+        stats,
+        details + "\ncolumns=" + matrix.length);
+  }
+
+  private static AlgorithmRun treeFrames(
+      BinarySearchTree tree, List<Integer> order, String result) {
+    List<AlgorithmStep> s = new ArrayList<>();
+    Set<Integer> doneValues = new LinkedHashSet<>();
+    List<Integer> layout = tree.levelOrder();
+    for (int key : order) {
+      doneValues.add(key);
+      Set<Integer> done = new LinkedHashSet<>();
+      for (int i = 0; i < layout.size(); i++) if (doneValues.contains(layout.get(i))) done.add(i);
+      s.add(
+          new AlgorithmStep(
+              "Visit node " + key,
+              "visit nodes in traversal order",
+              1,
+              TREE,
+              layout,
+              List.of(),
+              Set.of(layout.indexOf(key)),
+              Set.of(),
+              done,
+              List.of(),
+              Map.of("Visited", done.size()),
+              result));
+    }
+    return new AlgorithmRun(s, result);
+  }
+
+  private static GraphAlgorithms.Graph parseGraph(String input, boolean directed) {
+    List<GraphAlgorithms.Edge> edges = new ArrayList<>();
+    int max = -1;
+    for (String raw : input.split(",")) {
+      String token = raw.trim();
+      if (token.isEmpty()) continue;
+      String[] weight = token.split(":", 2);
+      int w = weight.length == 2 ? Integer.parseInt(weight[1].trim()) : 1;
+      String separator = token.contains(">") ? ">" : "-";
+      String endpoints = weight[0];
+      String[] p = endpoints.split(java.util.regex.Pattern.quote(separator));
+      if (p.length != 2) throw new IllegalArgumentException("Invalid edge: " + token);
+      int a = Integer.parseInt(p[0].trim()), b = Integer.parseInt(p[1].trim());
+      max = Math.max(max, Math.max(a, b));
+      edges.add(new GraphAlgorithms.Edge(a, b, w));
+    }
+    if (max >= 60)
+      throw new IllegalArgumentException("Graph visualization is limited to 60 vertices");
+    return new GraphAlgorithms.Graph(max + 1, edges, directed);
+  }
+
+  private static GraphAlgorithms.Graph completeGraph(int[][] d) {
+    List<GraphAlgorithms.Edge> e = new ArrayList<>();
+    for (int i = 0; i < d.length; i++)
+      for (int j = i + 1; j < d.length; j++) e.add(new GraphAlgorithms.Edge(i, j, d[i][j]));
+    return new GraphAlgorithms.Graph(d.length, e, false);
+  }
+
+  private static GraphAlgorithms.Graph capacityGraph(int[][] c) {
+    List<GraphAlgorithms.Edge> e = new ArrayList<>();
+    for (int i = 0; i < c.length; i++)
+      for (int j = 0; j < c.length; j++)
+        if (c[i][j] > 0) e.add(new GraphAlgorithms.Edge(i, j, c[i][j]));
+    return new GraphAlgorithms.Graph(c.length, e, true);
+  }
+
+  private static int[][] matrix(String input) {
+    String[] rows = input.trim().split(";");
+    int[][] m = new int[rows.length][];
+    for (int i = 0; i < rows.length; i++) m[i] = numbers(rows[i]);
+    for (int[] r : m)
+      if (r.length != m.length) throw new IllegalArgumentException("matrix must be square");
+    return m;
+  }
+
+  private static BinarySearchTree makeBst(int[] values) {
+    BinarySearchTree tree = new BinarySearchTree();
+    for (int v : values) tree.insert(v);
+    return tree;
+  }
+
+  private static Parts valuesAndParameter(String input) {
+    String[] p = input.split(";", 2);
+    if (p.length != 2) throw new IllegalArgumentException("Use values ; parameter");
+    return new Parts(numbers(p[0]), Integer.parseInt(p[1].trim()));
+  }
+
+  private record Parts(int[] values, int parameter) {}
+
+  public static int[] numbers(String input) {
+    String clean = input.trim();
+    if (clean.isEmpty()) return new int[0];
+    String[] parts = clean.split("[ ,]+");
+    int[] result = new int[parts.length];
+    for (int i = 0; i < parts.length; i++) result[i] = Integer.parseInt(parts[i].trim());
+    return result;
+  }
+
+  private static int[] numbersLimited(String input, int limit, String subject) {
+    int[] result = numbers(input);
+    if (result.length > limit)
+      throw new IllegalArgumentException(
+          "The " + subject + " visualization is limited to " + limit + " values");
+    return result;
+  }
+
+  private static List<String> labels(int n) {
+    List<String> result = new ArrayList<>();
+    for (int i = 0; i < n; i++) result.add(Integer.toString(i));
+    return result;
+  }
+
+  private static List<String> chars(String s) {
+    return s.chars().mapToObj(c -> String.valueOf((char) c)).toList();
+  }
+
+  private static Set<Integer> prefix(int end) {
+    return rangeSet(0, end - 1);
+  }
+
+  private static Set<Integer> outside(int low, int high, int n) {
+    Set<Integer> r = new LinkedHashSet<>();
+    r.addAll(rangeSet(0, low - 1));
+    r.addAll(rangeSet(high + 1, n - 1));
+    return r;
+  }
+
+  private static Set<Integer> rangeSet(int a, int b) {
+    Set<Integer> r = new LinkedHashSet<>();
+    for (int i = Math.max(0, a); i <= b; i++) r.add(i);
+    return r;
+  }
+
+  private static int countRoots(UnionFind uf, int n) {
+    Set<Integer> s = new LinkedHashSet<>();
+    for (int i = 0; i < n; i++) s.add(uf.find(i));
+    return s.size();
+  }
+
+  private static String distanceText(long[] d) {
+    List<String> r = new ArrayList<>();
+    for (long x : d) r.add(x >= GraphAlgorithms.INF ? "∞" : Long.toString(x));
+    return r.toString();
+  }
+
+  private static long countThrough(List<Integer> values, int limit) {
+    long count = 0;
+    for (int value : values) if (value <= limit) count++;
+    return count;
+  }
+
+  private static String title(String value) {
+    StringBuilder b = new StringBuilder();
+    for (String part : value.toLowerCase().split("_")) {
+      if (!b.isEmpty()) b.append(' ');
+      b.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+    }
+    return b.toString();
+  }
+
+  private static String sortTime(SortAlgorithms.Kind kind) {
+    return switch (kind) {
+      case BUBBLE -> "Best O(n), average/worst O(n²)";
+      case INSERTION -> "Best O(n), average/worst O(n²)";
+      case SELECTION -> "Best/average/worst O(n²)";
+      case MERGE, HEAP -> "Best/average/worst O(n log n)";
+      case COUNTING -> "Best/average/worst O(n + k)";
+      case RADIX -> "Best/average/worst O(d(n + b))";
+      case QUICK -> "Best/average O(n log n), worst O(n²)";
+      case RANDOMIZED_QUICK -> "Expected O(n log n), worst O(n²)";
+    };
+  }
+}

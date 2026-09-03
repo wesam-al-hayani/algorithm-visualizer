@@ -1,0 +1,51 @@
+.root { -fx-font-family: "Avenir Next", "Inter", "Segoe UI", sans-serif; }
+.app-root { -fx-background-color: #0b1220; }
+.header { -fx-padding: 16 24; -fx-alignment: center-left; -fx-background-color: #101827; -fx-border-color: transparent transparent #243149 transparent; }
+.brand-mark { -fx-background-color: linear-gradient(to bottom right, #ffb454, #ff7c78); -fx-background-radius: 12; -fx-padding: 10 12; -fx-text-fill: #111827; -fx-font-size: 17; -fx-font-weight: 800; }
+.brand-title .label:first-child, .eyebrow { -fx-text-fill: #ffb454; -fx-font-size: 10; -fx-font-weight: 800; -fx-letter-spacing: 1.4px; }
+.brand-title .label:last-child { -fx-text-fill: #f3f7ff; -fx-font-size: 17; -fx-font-weight: 700; }
+.course-pill { -fx-text-fill: #b8c7dc; -fx-background-color: #182338; -fx-background-radius: 20; -fx-padding: 7 13; }
+.sidebar { -fx-background-color: #0e1727; -fx-border-color: transparent #243149 transparent transparent; }
+.category-list { -fx-background-color: transparent; -fx-control-inner-background: transparent; -fx-background-insets: 0; }
+.category-list .scroll-bar:horizontal { -fx-opacity: 0; -fx-pref-height: 0; }
+.list-cell { -fx-background-color: transparent; -fx-text-fill: #9eacc0; -fx-padding: 11 12; -fx-background-radius: 9; }
+.list-cell:selected { -fx-background-color: #243149; -fx-text-fill: #ffffff; -fx-font-weight: 700; }
+.control-card, .visual-card, .info-panel { -fx-background-color: #131d30; -fx-background-radius: 14; -fx-border-color: #26344c; -fx-border-radius: 14; }
+.control-card { -fx-padding: 15; }
+.visual-card { -fx-padding: 14; }
+.label { -fx-text-fill: #dbe5f4; }
+.field-label { -fx-font-weight: 700; }
+.hint, .legend { -fx-text-fill: #8797ae; -fx-font-size: 11; }
+.operation { -fx-font-size: 16; -fx-font-weight: 700; }
+.result { -fx-text-fill: #54d6a0; -fx-font-weight: 700; }
+.text-field, .combo-box, .text-area { -fx-background-color: #0e1727; -fx-text-fill: #eaf0fb; -fx-border-color: #31415d; -fx-border-radius: 8; -fx-background-radius: 8; }
+.text-area .content { -fx-background-color: #0e1727; }
+.text-area { -fx-font-family: "SF Mono", "Menlo", monospace; -fx-font-size: 11; }
+.combo-box .list-cell { -fx-text-fill: #eaf0fb; }
+.combo-box-popup .list-view {
+  -fx-background-color: #0e1727;
+  -fx-control-inner-background: #0e1727;
+  -fx-border-color: #31415d;
+}
+.combo-box-popup .list-cell {
+  -fx-background-color: #0e1727;
+  -fx-text-fill: #dbe5f4;
+}
+.combo-box-popup .list-cell:hover,
+.combo-box-popup .list-cell:selected {
+  -fx-background-color: #2b3d5b;
+  -fx-text-fill: #ffffff;
+}
+.button { -fx-background-color: #263650; -fx-text-fill: #edf3fc; -fx-background-radius: 8; -fx-padding: 8 13; -fx-cursor: hand; }
+.button:hover { -fx-background-color: #344a6c; }
+.button:first-child { -fx-background-color: #e9953e; -fx-text-fill: #111827; -fx-font-weight: 800; }
+.slider .track { -fx-background-color: #34445e; }
+.slider .thumb { -fx-background-color: #ffb454; }
+.info-scroll, .info-scroll > .viewport { -fx-background-color: transparent; }
+.stat-card { -fx-background-color: #1b2940; -fx-background-radius: 9; -fx-padding: 8 10; -fx-min-width: 88; }
+.stat-card .label:first-child { -fx-text-fill: #8797ae; -fx-font-size: 9; -fx-font-weight: 800; }
+.stat-card .label:last-child { -fx-text-fill: #ffffff; -fx-font-size: 17; -fx-font-weight: 800; }
+.details { -fx-text-fill: #aebdd1; -fx-padding: 6 0 0 0; }
+.separator .line { -fx-border-color: #2a3850; }
+.split-pane { -fx-background-color: transparent; -fx-padding: 0; }
+.split-pane-divider { -fx-background-color: #0b1220; -fx-padding: 0 5; }
