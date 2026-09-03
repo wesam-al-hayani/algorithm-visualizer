@@ -23,18 +23,21 @@ Algorithm Lab V2.0 — Phase 1: safety and refactoring
 - [x] Switch to the existing `codex-work` development branch
 - [x] Re-run the complete V1 test suite as the V2 baseline
 - [x] Split the 1,782-line `AlgorithmCatalog` into nine category catalogs and shared helpers
+- [x] Extract a UI-independent `PlaybackController` state machine
+- [x] Extract `InputGenerator` and pure `GridEditor` transformations
+- [x] Rewire the JavaFX entry point without changing the step-based playback model
 
 ## Last Completed Task
 
-Category-specific catalog refactor with all 61 existing demos preserved
+Application responsibility refactor; clean tests and JavaFX startup pass
 
 ## Current Task
 
-Extract focused playback, input generation, and grid editing responsibilities from `AlgorithmVisualizerApp`.
+Expand randomized/parameterized tests, add direct playback/grid tests, configure JaCoCo, and upgrade GitHub Actions to a multi-OS matrix.
 
 ## Next Task
 
-Expand randomized/parameterized tests, add JaCoCo, and upgrade GitHub Actions to a multi-OS matrix.
+Upgrade educational UI: algorithm search, highlighted pseudocode, themes, shortcuts, favorites/recent items, and focus mode.
 
 ## Tests
 
@@ -46,6 +49,8 @@ Expand randomized/parameterized tests, add JaCoCo, and upgrade GitHub Actions to
 - Manual UI: Start, Pause, Resume, one-step, Reset, Generate, speed, category switching, input-change cancellation, invalid-input alert, graph rendering, grid toolbar, maze generation, dropdown contrast, and resizing: PASS
 - V2 baseline `./mvnw --batch-mode clean test`: PASS (2026-09-03)
 - Catalog refactor `./mvnw --batch-mode test`: PASS (23 tests, 61 catalog demos)
+- Application refactor `./mvnw --batch-mode clean test`: PASS (23 tests)
+- Application refactor `./mvnw javafx:run` startup: PASS
 
 ## Known Problems
 
@@ -60,4 +65,4 @@ Expand randomized/parameterized tests, add JaCoCo, and upgrade GitHub Actions to
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: catalog refactor checkpoint ready to commit
+- Pending commits: application responsibility refactor ready to commit

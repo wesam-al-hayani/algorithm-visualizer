@@ -1,12 +1,13 @@
 package dev.wesam.visualizer;
 
-import dev.wesam.visualizer.algorithms.SortAlgorithms;
 import dev.wesam.visualizer.catalog.AlgorithmCatalog;
 import dev.wesam.visualizer.catalog.AlgorithmDemo;
 import dev.wesam.visualizer.model.AlgorithmRun;
 import dev.wesam.visualizer.model.AlgorithmStep;
+import dev.wesam.visualizer.ui.GridEditor;
+import dev.wesam.visualizer.ui.InputGenerator;
+import dev.wesam.visualizer.ui.PlaybackController;
 import dev.wesam.visualizer.ui.VisualizationCanvas;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -66,8 +67,7 @@ public final class AlgorithmVisualizerApp extends Application {
       maze = new Button("Generate Maze");
   private final HBox gridTools =
       new HBox(8, drawWalls, setGridStart, setGridTarget, clearPath, clearGrid, maze);
-  private AlgorithmRun run;
-  private int frame;
+  private final PlaybackController playback = new PlaybackController();
   private Timeline timeline;
 
   @Override
@@ -213,10 +213,9 @@ public final class AlgorithmVisualizerApp extends Application {
         .addListener(
             (o, old, demo) -> {
               stopPlayback();
-              run = null;
-              frame = 0;
+              playback.reset();
               visualization.show(null);
-              updateButtons(false, false);
+              updateButtons();
               boolean isGrid = demo != null && demo.name().startsWith("Grid ");
               gridTools.setManaged(isGrid);
               gridTools.setVisible(isGrid);
@@ -241,37 +240,39 @@ public final class AlgorithmVisualizerApp extends Application {
         .textProperty()
         .addListener(
             (observable, oldValue, newValue) -> {
-              if (timeline != null) {
+              if (playback.hasRun()) {
                 stopPlayback();
-                run = null;
-                frame = 0;
+                playback.reset();
                 visualization.show(null);
                 operation.setText("Input changed — press Start to run again");
                 progress.setText("Step 0 / 0");
                 result.setText("");
                 statistics.getChildren().clear();
-                updateButtons(false, false);
+                updateButtons();
               }
             });
     start.setOnAction(e -> startRun());
     pause.setOnAction(
         e -> {
           if (timeline != null) timeline.pause();
-          updateButtons(false, true);
+          playback.pause();
+          updateButtons();
         });
     resume.setOnAction(
         e -> {
           if (timeline != null) {
+            playback.resume();
             timeline.play();
-            updateButtons(true, false);
+            updateButtons();
           }
         });
     stepButton.setOnAction(
         e -> {
-          if (run == null) prepare();
+          if (!playback.hasRun() && !prepare()) return;
           if (timeline != null) timeline.pause();
+          playback.pause();
           advance();
-          updateButtons(false, true);
+          updateButtons();
         });
     reset.setOnAction(e -> reset());
     generate.setOnAction(e -> randomize());
@@ -281,7 +282,7 @@ public final class AlgorithmVisualizerApp extends Application {
             (o, a, b) -> {
               if (timeline != null) timeline.setRate(b.doubleValue());
             });
-    updateButtons(false, false);
+    updateButtons();
     ToggleGroup editMode = new ToggleGroup();
     drawWalls.setToggleGroup(editMode);
     setGridStart.setToggleGroup(editMode);
@@ -307,16 +308,18 @@ public final class AlgorithmVisualizerApp extends Application {
 
   private void startRun() {
     if (!prepare()) return;
-    if (run.steps().isEmpty()) {
+    if (playback.totalSteps() == 0) {
       operation.setText("Completed without visual steps");
-      result.setText(run.result());
+      result.setText(playback.result());
+      updateButtons();
       return;
     }
+    playback.start();
     timeline = new Timeline(new KeyFrame(Duration.millis(760), e -> advance()));
     timeline.setCycleCount(Timeline.INDEFINITE);
     timeline.setRate(speed.getValue());
     timeline.play();
-    updateButtons(true, false);
+    updateButtons();
   }
 
   private boolean prepare() {
@@ -324,10 +327,10 @@ public final class AlgorithmVisualizerApp extends Application {
     try {
       AlgorithmDemo demo = algorithms.getValue();
       if (demo == null) return false;
-      run = demo.runner().apply(input.getText());
-      frame = 0;
+      AlgorithmRun run = demo.runner().apply(input.getText());
+      playback.load(run);
       result.setText("");
-      progress.setText("Step 0 / " + run.steps().size());
+      progress.setText("Step 0 / " + playback.totalSteps());
       return true;
     } catch (Exception exception) {
       Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -340,36 +343,36 @@ public final class AlgorithmVisualizerApp extends Application {
   }
 
   private void advance() {
-    if (run == null || frame >= run.steps().size()) {
+    var next = playback.advanceOne();
+    if (next.isEmpty()) {
       finish();
       return;
     }
-    AlgorithmStep current = run.steps().get(frame++);
+    AlgorithmStep current = next.orElseThrow();
     visualization.show(current);
     operation.setText(current.message());
     pseudocode.setText(markLine(current.pseudocode(), current.activeLine()));
     showStatistics(current);
-    progress.setText("Step " + frame + " / " + run.steps().size());
-    if (frame >= run.steps().size()) finish();
+    progress.setText("Step " + playback.position() + " / " + playback.totalSteps());
+    if (playback.state() == PlaybackController.State.FINISHED) finish();
   }
 
   private void finish() {
     stopPlayback();
-    if (run != null) result.setText(run.result());
+    if (playback.hasRun()) result.setText(playback.result());
     operation.setText("Complete");
-    updateButtons(false, false);
+    updateButtons();
   }
 
   private void reset() {
     stopPlayback();
-    run = null;
-    frame = 0;
+    playback.reset();
     visualization.show(null);
     result.setText("");
     operation.setText(algorithms.getValue() == null ? "Ready" : algorithms.getValue().name());
     progress.setText("Step 0 / 0");
     statistics.getChildren().clear();
-    updateButtons(false, false);
+    updateButtons();
   }
 
   private void stopPlayback() {
@@ -379,9 +382,11 @@ public final class AlgorithmVisualizerApp extends Application {
     }
   }
 
-  private void updateButtons(boolean running, boolean paused) {
+  private void updateButtons() {
+    boolean running = playback.state() == PlaybackController.State.RUNNING;
+    boolean paused = playback.state() == PlaybackController.State.PAUSED;
     pause.setDisable(!running);
-    resume.setDisable(!paused || run == null || frame >= run.steps().size());
+    resume.setDisable(!paused || !playback.hasRemainingSteps());
     stepButton.setDisable(running);
     start.setDisable(running);
   }
@@ -422,53 +427,9 @@ public final class AlgorithmVisualizerApp extends Application {
   private void randomize() {
     AlgorithmDemo demo = algorithms.getValue();
     if (demo == null) return;
-    Random random = new Random();
-    String name = demo.name();
-    if (demo.category().equals("Sorting")
-        || demo.category().equals("Trees")
-        || demo.category().equals("Heaps & Advanced Structures")) {
-      input.setText(randomCsv(random, 10));
-    } else if (name.equals("Linear Search") || name.equals("Binary Search")) {
-      int[] values = randomValues(random, 10);
-      if (name.equals("Binary Search"))
-        values = SortAlgorithms.sort(values, SortAlgorithms.Kind.MERGE);
-      input.setText(csv(values) + " ; " + values[random.nextInt(values.length)]);
-    } else if (name.equals("Quickselect") || name.equals("Median of Medians")) {
-      input.setText(randomCsv(random, 11) + " ; " + random.nextInt(11));
-    } else if (demo.category().equals("Strings & Hashing")
-        && (name.contains("Probing")
-            || name.equals("Separate Chaining")
-            || name.equals("Double Hashing"))) {
-      int[] keys = positiveRandomValues(random, 9);
-      input.setText(csv(keys) + ",?" + keys[random.nextInt(keys.length)]);
-    } else if (name.contains("Knapsack")) {
-      input.setText("2,3,4,5,6 ; 3,5,6,8,9 ; 12");
-    } else if (name.startsWith("Grid ")) {
-      makeMaze();
-      previewGrid();
-      return;
-    } else input.setText(demo.defaultInput());
+    input.setText(InputGenerator.generate(demo, input.getText(), new Random()));
     reset();
-  }
-
-  private int[] randomValues(Random random, int count) {
-    int[] values = new int[count];
-    for (int i = 0; i < count; i++) values[i] = random.nextInt(91) - 20;
-    return values;
-  }
-
-  private int[] positiveRandomValues(Random random, int count) {
-    int[] values = new int[count];
-    for (int i = 0; i < count; i++) values[i] = random.nextInt(90) + 1;
-    return values;
-  }
-
-  private String randomCsv(Random random, int count) {
-    return csv(randomValues(random, count));
-  }
-
-  private String csv(int[] values) {
-    return Arrays.toString(values).replace("[", "").replace("]", "");
+    if (demo.name().startsWith("Grid ")) previewGrid();
   }
 
   private void previewGrid() {
@@ -481,61 +442,23 @@ public final class AlgorithmVisualizerApp extends Application {
 
   private void editGridCell(int row, int column) {
     if (!gridTools.isVisible()) return;
-    String[] rows = input.getText().split("/");
-    if (row >= rows.length || column >= rows[row].length()) return;
-    char[][] grid = new char[rows.length][];
-    for (int i = 0; i < rows.length; i++) grid[i] = rows[i].toCharArray();
-    if (setGridStart.isSelected()) {
-      replace(grid, 'S', '.');
-      if (grid[row][column] != 'T') grid[row][column] = 'S';
-    } else if (setGridTarget.isSelected()) {
-      replace(grid, 'T', '.');
-      if (grid[row][column] != 'S') grid[row][column] = 'T';
-    } else if (grid[row][column] != 'S' && grid[row][column] != 'T')
-      grid[row][column] = grid[row][column] == '#' ? '.' : '#';
-    input.setText(joinGrid(grid));
+    GridEditor.Mode mode =
+        setGridStart.isSelected()
+            ? GridEditor.Mode.SET_START
+            : setGridTarget.isSelected() ? GridEditor.Mode.SET_TARGET : GridEditor.Mode.DRAW_WALLS;
+    input.setText(GridEditor.edit(input.getText(), row, column, mode));
     reset();
     previewGrid();
   }
 
   private void makeClearGrid() {
-    String[] rows = input.getText().split("/");
-    int r = Math.max(2, rows.length), c = Math.max(2, rows[0].length());
-    char[][] grid = new char[r][c];
-    for (char[] line : grid) java.util.Arrays.fill(line, '.');
-    grid[0][0] = 'S';
-    grid[r - 1][c - 1] = 'T';
-    input.setText(joinGrid(grid));
+    input.setText(GridEditor.clear(input.getText()));
     reset();
   }
 
   private void makeMaze() {
-    String[] rows = input.getText().split("/");
-    int r = Math.max(5, rows.length), c = Math.max(6, rows[0].length());
-    char[][] grid = new char[r][c];
-    Random random = new Random();
-    for (int i = 0; i < r; i++)
-      for (int j = 0; j < c; j++) grid[i][j] = random.nextDouble() < .27 ? '#' : '.';
-    for (int i = 0; i < r; i++) grid[i][0] = '.';
-    for (int j = 0; j < c; j++) grid[r - 1][j] = '.';
-    grid[0][0] = 'S';
-    grid[r - 1][c - 1] = 'T';
-    input.setText(joinGrid(grid));
+    input.setText(GridEditor.randomWalls(input.getText(), new Random()));
     reset();
-  }
-
-  private void replace(char[][] grid, char target, char replacement) {
-    for (char[] row : grid)
-      for (int i = 0; i < row.length; i++) if (row[i] == target) row[i] = replacement;
-  }
-
-  private String joinGrid(char[][] grid) {
-    StringBuilder out = new StringBuilder();
-    for (int i = 0; i < grid.length; i++) {
-      if (i > 0) out.append('/');
-      out.append(grid[i]);
-    }
-    return out.toString();
   }
 
   public static void main(String[] args) {
