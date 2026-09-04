@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 9: experimental analysis laboratory
+Algorithm Lab V2.0 — Phase 10: portfolio quality, exports, and accessibility
 
 ## Completed
 
@@ -79,18 +79,25 @@ Algorithm Lab V2.0 — Phase 9: experimental analysis laboratory
 - [x] Upgrade Edmonds–Karp to expose real augmenting-path visualization frames
 - [x] Polish Edmonds–Karp vs Dinic to separate flow operations from actual visualization steps
 - [x] Improve result-table sizing so comparison labels stay within their cells
+- [x] Add a count-only path through the real sorting implementations without animation-frame overhead
+- [x] Add Experimental Complexity for Bubble Sort, Merge Sort, and Binary Search
+- [x] Plot measured comparison counts and theoretical n², n log n, or log n curves together
+- [x] Add configurable randomized Quick Sort trials, array size, and seed
+- [x] Compare deterministic right-boundary and randomized pivots on the exact same base array
+- [x] Report minimum, maximum, average, and median comparisons for both pivot strategies
+- [x] Add responsive JavaFX chart rendering with bounded axis labels for large trial counts
 
 ## Last Completed Task
 
-Phase 8 comparison features: sorting compare/race, shortest-path comparisons, and polished max-flow comparison
+Phase 9 analysis lab: theoretical/measured complexity charts and controlled Quick Sort experiments
 
 ## Current Task
 
-Add the experimental complexity laboratory and improved randomized Quick Sort experiments.
+Complete portfolio documentation, screenshots, export features, and accessibility review.
 
 ## Next Task
 
-Complete portfolio documentation, screenshots, export features, and accessibility review.
+Add jlink/jpackage distribution, platform CI artifacts, and GitHub Release preparation.
 
 ## Tests
 
@@ -150,6 +157,12 @@ Complete portfolio documentation, screenshots, export features, and accessibilit
 - Phase 8 JaCoCo core branch coverage: 88.57% (1,713 / 1,934 branches)
 - Phase 8 `./mvnw --batch-mode -DskipTests package`: PASS
 - Phase 8 packaged UI smoke: direct race selectors, five-way synchronized side-by-side playback, active pseudocode, shortest-path result table, and four-algorithm cost agreement: PASS
+- Phase 9 analysis focused suites: PASS (101 invocations; 83 catalog demos)
+- Phase 9 `./mvnw --batch-mode clean test`: PASS (180 JUnit invocations; 83 catalog demos)
+- Phase 9 JaCoCo core line coverage: 98.45% (2,924 / 2,970 lines); required minimum: 80%
+- Phase 9 JaCoCo core branch coverage: 88.34% (1,750 / 1,981 branches)
+- Phase 9 `./mvnw --batch-mode -DskipTests package`: PASS
+- Phase 9 packaged UI smoke: measured/theoretical complexity chart, deterministic/randomized trial chart, and min/max/average/median result table: PASS
 
 ## Known Problems
 
@@ -163,4 +176,4 @@ Complete portfolio documentation, screenshots, export features, and accessibilit
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 8 comparison-features checkpoint ready to commit
+- Pending commits: Phase 9 analysis-lab checkpoint ready to commit

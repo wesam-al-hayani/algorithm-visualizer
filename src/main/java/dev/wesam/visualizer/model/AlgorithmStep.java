@@ -53,6 +53,7 @@ public record AlgorithmStep(
     TABLE,
     TREE,
     GRID,
+    CHART,
     SETS
   }
 

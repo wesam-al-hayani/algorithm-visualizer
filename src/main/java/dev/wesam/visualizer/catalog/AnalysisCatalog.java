@@ -3,11 +3,13 @@ package dev.wesam.visualizer.catalog;
 import static dev.wesam.visualizer.catalog.CatalogSupport.*;
 import static dev.wesam.visualizer.model.AlgorithmStep.VisualKind.*;
 
-import dev.wesam.visualizer.algorithms.SortAlgorithms;
+import dev.wesam.visualizer.algorithms.AnalysisExperiments;
 import dev.wesam.visualizer.model.AlgorithmRun;
 import dev.wesam.visualizer.model.AlgorithmStep;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,6 +29,22 @@ final class AnalysisCatalog {
             "Maximum n (5–50)",
             "20",
             AnalysisCatalog::growth));
+    demos.add(
+        demo(
+            "Algorithm Analysis",
+            "Experimental Complexity",
+            "Runs one selected algorithm without visualization overhead at several input sizes and"
+                + " charts measured comparisons against its theoretical growth curve.",
+            "parse an algorithm, increasing sizes, and random seed\n"
+                + "generate a repeatable input at each size\n"
+                + "run the instrumented algorithm without retaining animation frames\n"
+                + "record measured comparisons and theoretical growth\n"
+                + "plot both curves on the same JavaFX chart",
+            "Experimental operation counting",
+            "O(max n) working input",
+            "BUBBLE_SORT|MERGE_SORT|BINARY_SEARCH ; sizes ; seed",
+            "BUBBLE_SORT ; 10,25,50,100,250,500 ; 2026",
+            AnalysisCatalog::experimentalComplexity));
     demos.add(
         demo(
             "Algorithm Analysis",
@@ -54,13 +72,17 @@ final class AnalysisCatalog {
         demo(
             "Algorithm Analysis",
             "Randomized Quicksort Experiment",
-            "Repeats quicksort with random pivots and reports the observed average comparison"
-                + " count.",
-            "repeat trials\nshuffle pivot choices\nsum comparisons / trials",
+            "Compares fixed right-boundary pivots with randomized pivots on the exact same seeded"
+                + " base array and reports a full comparison-count distribution.",
+            "parse trial count, array size, and seed\n"
+                + "generate one seeded base permutation\n"
+                + "run deterministic and randomized pivots on identical clones\n"
+                + "collect minimum, maximum, average, and median comparisons\n"
+                + "chart both comparison-count series without animation overhead",
             "Expected O(n log n)",
             "O(log n) expected",
-            "values ; trials",
-            "9,1,8,2,7,3,6,4,5,0 ; 50",
+            "trials,array size,random seed",
+            "200,100,2026",
             AnalysisCatalog::randomizedExperiment));
     return List.copyOf(demos);
   }
@@ -118,6 +140,60 @@ final class AnalysisCatalog {
         result);
   }
 
+  static AlgorithmRun experimentalComplexity(String input) {
+    String[] parts = input.split(";", -1);
+    if (parts.length != 3)
+      throw new IllegalArgumentException("Use algorithm ; increasing sizes ; seed");
+    AnalysisExperiments.Subject subject;
+    try {
+      subject =
+          AnalysisExperiments.Subject.valueOf(
+              parts[0].trim().toUpperCase(Locale.ROOT).replace(' ', '_'));
+    } catch (IllegalArgumentException exception) {
+      throw new IllegalArgumentException(
+          "Choose BUBBLE_SORT, MERGE_SORT, or BINARY_SEARCH", exception);
+    }
+    int[] sizes = numbers(parts[1]);
+    long seed = Long.parseLong(parts[2].trim());
+    AnalysisExperiments.ComplexityResult experiment =
+        AnalysisExperiments.complexity(subject, sizes, seed);
+    List<Integer> values = new ArrayList<>();
+    List<String> labels = new ArrayList<>();
+    for (AnalysisExperiments.ComplexityPoint point : experiment.points()) {
+      values.add(Math.toIntExact(point.measured()));
+      labels.add(Integer.toString(point.size()));
+    }
+    for (AnalysisExperiments.ComplexityPoint point : experiment.points())
+      values.add(Math.toIntExact(point.theoretical()));
+    AnalysisExperiments.ComplexityPoint last = experiment.points()[experiment.points().length - 1];
+    AlgorithmStep chart =
+        new AlgorithmStep(
+            "Measured comparisons vs " + subject.theory(),
+            "parse experiment\ngenerate inputs\nmeasure operations\ncompute theory\nplot curves",
+            4,
+            CHART,
+            values,
+            labels,
+            Set.of(),
+            Set.of(),
+            Set.of(),
+            List.of(),
+            Map.of(
+                "Input sizes", sizes.length,
+                "Largest n", last.size(),
+                "Measured comparisons", last.measured(),
+                "Theoretical value", last.theoretical()),
+            "chart\nseries=2\npoints="
+                + sizes.length
+                + "\nnames=Measured comparisons|Theoretical "
+                + subject.theory()
+                + "\nxlabel=Input size n\nseed="
+                + seed);
+    return new AlgorithmRun(
+        List.of(chart),
+        subject + ": measured " + last.measured() + " comparisons at n=" + last.size());
+  }
+
   static AlgorithmRun amortized(String input) {
     int count = Math.max(1, Math.min(200, Integer.parseInt(input.trim()))),
         capacity = 1,
@@ -148,36 +224,86 @@ final class AnalysisCatalog {
   }
 
   static AlgorithmRun randomizedExperiment(String input) {
-    Parts p = valuesAndParameter(input);
-    int trials = Math.max(1, Math.min(1000, p.parameter));
-    long total = 0, min = Long.MAX_VALUE, max = 0;
-    List<AlgorithmStep> s = new ArrayList<>();
-    for (int i = 0; i < trials; i++) {
-      long c =
-          SortAlgorithms.run(p.values, SortAlgorithms.Kind.RANDOMIZED_QUICK, i * 7919L + 17)
-              .comparisons();
-      total += c;
-      min = Math.min(min, c);
-      max = Math.max(max, c);
-      if (i < 50 || i == trials - 1)
-        s.add(
-            arrayStep(
-                "Trial " + (i + 1) + " uses new random pivots",
-                p.values,
-                Set.of(),
-                Set.of(),
-                Set.of(),
-                Map.of("Trial", i + 1, "Comparisons", c, "Running average", total / (i + 1)),
-                "Deterministic input; randomized pivot choices"));
-    }
+    String[] values = input.trim().split("\\s*,\\s*");
+    if (values.length != 3) throw new IllegalArgumentException("Use trials,array size,random seed");
+    int trials = Integer.parseInt(values[0]);
+    int size = Integer.parseInt(values[1]);
+    long seed = Long.parseLong(values[2]);
+    AnalysisExperiments.QuickSortExperiment experiment =
+        AnalysisExperiments.quickSort(trials, size, seed);
+    List<Integer> observations = new ArrayList<>(trials * 2);
+    Arrays.stream(experiment.deterministicComparisons())
+        .forEach(value -> observations.add(Math.toIntExact(value)));
+    Arrays.stream(experiment.randomizedComparisons())
+        .forEach(value -> observations.add(Math.toIntExact(value)));
+    List<String> trialLabels =
+        java.util.stream.IntStream.rangeClosed(1, trials).mapToObj(Integer::toString).toList();
+    AlgorithmStep chart =
+        new AlgorithmStep(
+            "Deterministic vs randomized pivot comparisons",
+            "parse experiment\n"
+                + "generate base array\n"
+                + "run both strategies\n"
+                + "summarize distribution\n"
+                + "plot trials",
+            4,
+            CHART,
+            observations,
+            trialLabels,
+            Set.of(),
+            Set.of(),
+            Set.of(),
+            List.of(),
+            Map.of(
+                "Trials",
+                trials,
+                "Array size",
+                size,
+                "Deterministic average",
+                experiment.deterministic().average(),
+                "Randomized average",
+                experiment.randomized().average()),
+            "chart\nseries=2\npoints="
+                + trials
+                + "\nnames=Right-boundary pivot|Randomized pivot\nxlabel=Trial\nseed="
+                + seed);
+    List<String> summary =
+        new ArrayList<>(List.of("Pivot Strategy", "Minimum", "Maximum", "Average", "Median"));
+    addSummary(summary, "Right boundary", experiment.deterministic());
+    addSummary(summary, "Randomized", experiment.randomized());
+    AlgorithmStep table =
+        new AlgorithmStep(
+            "Comparison-count distribution",
+            "parse experiment\n"
+                + "generate base array\n"
+                + "run both strategies\n"
+                + "summarize distribution\n"
+                + "plot trials",
+            3,
+            TABLE,
+            List.of(),
+            summary,
+            rangeSet(5, summary.size() - 1),
+            Set.of(),
+            Set.of(),
+            List.of(),
+            Map.of("Trials", trials, "Array size", size, "Seed", seed),
+            "columns=5\nBoth strategies receive the exact same seeded base array. Counts exclude"
+                + " visualization and wall-clock overhead.");
     return new AlgorithmRun(
-        s,
-        "Average comparisons: "
-            + String.format("%.2f", total / (double) trials)
-            + " (min "
-            + min
-            + ", max "
-            + max
-            + ")");
+        List.of(chart, table),
+        "Deterministic average "
+            + String.format("%.2f", experiment.deterministic().average())
+            + "; randomized average "
+            + String.format("%.2f", experiment.randomized().average()));
+  }
+
+  private static void addSummary(
+      List<String> cells, String name, AnalysisExperiments.Summary summary) {
+    cells.add(name);
+    cells.add(Long.toString(summary.minimum()));
+    cells.add(Long.toString(summary.maximum()));
+    cells.add(String.format("%.2f", summary.average()));
+    cells.add(String.format("%.2f", summary.median()));
   }
 }

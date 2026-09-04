@@ -30,8 +30,17 @@ public final class SortAlgorithms {
   }
 
   public static SortResult run(int[] input, Kind kind, long seed) {
+    return execute(input, kind, seed, true);
+  }
+
+  /** Runs the same instrumented implementation without retaining visualization snapshots. */
+  public static SortResult measure(int[] input, Kind kind, long seed) {
+    return execute(input, kind, seed, false);
+  }
+
+  private static SortResult execute(int[] input, Kind kind, long seed, boolean captureFrames) {
     int[] values = input.clone();
-    Recorder r = new Recorder(values, pseudocode(kind));
+    Recorder r = new Recorder(values, pseudocode(kind), captureFrames);
     switch (kind) {
       case BUBBLE -> bubble(values, r);
       case SELECTION -> selection(values, r);
@@ -289,10 +298,12 @@ public final class SortAlgorithms {
     private final String pseudocode;
     private final List<AlgorithmStep> steps = new ArrayList<>();
     private long comparisons, swaps, writes, maxDepth;
+    private final boolean captureFrames;
 
-    private Recorder(int[] values, String pseudocode) {
+    private Recorder(int[] values, String pseudocode, boolean captureFrames) {
       this.values = values;
       this.pseudocode = pseudocode;
+      this.captureFrames = captureFrames;
       frame("Initial array", Set.of(), Set.of(), Set.of(), 0);
     }
 
@@ -322,6 +333,7 @@ public final class SortAlgorithms {
         Set<Integer> secondary,
         Set<Integer> complete,
         int line) {
+      if (!captureFrames) return;
       Map<String, Number> stats = new LinkedHashMap<>();
       stats.put("Comparisons", comparisons);
       stats.put("Swaps", swaps);

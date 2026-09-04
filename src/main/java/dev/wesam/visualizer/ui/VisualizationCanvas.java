@@ -95,6 +95,7 @@ public final class VisualizationCanvas extends Region {
       case GRAPH -> drawGraph(g, w, h);
       case TREE -> drawTree(g, w, h);
       case GRID -> drawGrid(g, w, h);
+      case CHART -> drawChart(g, w, h);
       case TABLE -> drawTable(g, w, h);
       case TEXT, SETS -> drawTiles(g, w, h);
     }
@@ -328,6 +329,62 @@ public final class VisualizationCanvas extends Region {
           top + (r + .58) * cellH,
           Math.max(8, cellW - 8));
     }
+  }
+
+  private void drawChart(GraphicsContext g, double w, double h) {
+    int series = detailInteger("series", 2), points = detailInteger("points", 0);
+    String[] names = detailValue("names").split("\\|", -1);
+    if (series <= 0 || points < 2 || step.values().size() < series * points) {
+      drawCentered(g, w, h, "Invalid chart data");
+      return;
+    }
+    double left = 58, right = w - 28, top = 44, bottom = h - 52;
+    int maximum = step.values().stream().mapToInt(Math::abs).max().orElse(1);
+    maximum = Math.max(1, maximum);
+    g.setLineWidth(1);
+    g.setFont(Font.font(10));
+    g.setTextAlign(TextAlignment.RIGHT);
+    for (int tick = 0; tick <= 4; tick++) {
+      double y = bottom - (bottom - top) * tick / 4.0;
+      g.setStroke(Color.web("#33445f"));
+      g.strokeLine(left, y, right, y);
+      g.setFill(Color.web("#a9b7cc"));
+      g.fillText(Integer.toString(maximum * tick / 4), left - 7, y + 4);
+    }
+    Color[] colors = {ACTIVE, SECONDARY, COMPLETE, Color.web("#74b9ff")};
+    for (int line = 0; line < series; line++) {
+      g.setStroke(colors[line % colors.length]);
+      g.setFill(colors[line % colors.length]);
+      g.setLineWidth(2.5);
+      for (int point = 0; point < points; point++) {
+        int value = step.values().get(line * points + point);
+        double x = left + (right - left) * point / (points - 1.0);
+        double y = bottom - (bottom - top) * value / maximum;
+        if (point > 0) {
+          int previous = step.values().get(line * points + point - 1);
+          double previousX = left + (right - left) * (point - 1) / (points - 1.0);
+          double previousY = bottom - (bottom - top) * previous / maximum;
+          g.strokeLine(previousX, previousY, x, y);
+        }
+        g.fillOval(x - 3.5, y - 3.5, 7, 7);
+      }
+      g.setTextAlign(TextAlignment.LEFT);
+      String name = line < names.length ? names[line] : "Series " + (line + 1);
+      g.fillText(name, left + line * Math.max(120, (right - left) / series), 24);
+    }
+    g.setFill(TEXT);
+    g.setTextAlign(TextAlignment.CENTER);
+    g.setFont(Font.font(10));
+    int labelInterval = Math.max(1, (int) Math.ceil(points / 8.0));
+    for (int point = 0; point < points; point++) {
+      if (point % labelInterval != 0 && point != points - 1) continue;
+      double x = left + (right - left) * point / (points - 1.0);
+      String label =
+          point < step.labels().size() ? step.labels().get(point) : Integer.toString(point + 1);
+      g.fillText(label, x, bottom + 18);
+    }
+    String xLabel = detailValue("xlabel");
+    if (!xLabel.isBlank()) g.fillText(xLabel, (left + right) / 2, h - 12);
   }
 
   private void drawTiles(GraphicsContext g, double w, double h) {
