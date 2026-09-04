@@ -3,6 +3,7 @@ package dev.wesam.visualizer.ui;
 import dev.wesam.visualizer.model.AlgorithmStep;
 import java.util.List;
 import java.util.function.BiConsumer;
+import javafx.scene.AccessibleRole;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.layout.Region;
@@ -29,6 +30,9 @@ public final class VisualizationCanvas extends Region {
     widthProperty().addListener((o, a, b) -> redraw());
     heightProperty().addListener((o, a, b) -> redraw());
     setMinSize(360, 300);
+    setAccessibleRole(AccessibleRole.IMAGE_VIEW);
+    setAccessibleText("Algorithm visualization canvas. Choose an algorithm and press Start.");
+    setFocusTraversable(true);
     canvas.setOnMousePressed(event -> handleGridPointer(event.getX(), event.getY()));
     canvas.setOnMouseDragged(event -> handleGridPointer(event.getX(), event.getY()));
     canvas.setOnMouseReleased(
@@ -40,6 +44,10 @@ public final class VisualizationCanvas extends Region {
 
   public void show(AlgorithmStep value) {
     step = value;
+    setAccessibleText(
+        value == null
+            ? "No algorithm visualization is currently loaded."
+            : "Algorithm visualization: " + value.message() + ". " + value.details());
     redraw();
   }
 

@@ -86,14 +86,20 @@ Algorithm Lab V2.0 — Phase 10: portfolio quality, exports, and accessibility
 - [x] Compare deterministic right-boundary and randomized pivots on the exact same base array
 - [x] Report minimum, maximum, average, and median comparisons for both pivot strategies
 - [x] Add responsive JavaFX chart rendering with bounded axis labels for large trial counts
+- [x] Add dependency-free TXT and CSV export content for the current result, input, operation, statistics, and details
+- [x] Add Export TXT / Export CSV save actions with safe suggested filenames
+- [x] Centralize friendly parser feedback with the selected algorithm's expected format and example
+- [x] Prevent normal UI validation alerts from exposing exception class names or stack traces
+- [x] Add accessible labels for navigation, inputs, comparison selectors, and the visualization canvas
+- [x] Keep visible keyboard focus styling and non-color operation/pseudocode/statistic cues
 
 ## Last Completed Task
 
-Phase 9 analysis lab: theoretical/measured complexity charts and controlled Quick Sort experiments
+Phase 10 export, validation-feedback, and accessibility code improvements
 
 ## Current Task
 
-Complete portfolio documentation, screenshots, export features, and accessibility review.
+Generate real application screenshots and complete the README, learning, architecture, testing, and coverage documentation.
 
 ## Next Task
 
@@ -163,6 +169,7 @@ Add jlink/jpackage distribution, platform CI artifacts, and GitHub Release prepa
 - Phase 9 JaCoCo core branch coverage: 88.34% (1,750 / 1,981 branches)
 - Phase 9 `./mvnw --batch-mode -DskipTests package`: PASS
 - Phase 9 packaged UI smoke: measured/theoretical complexity chart, deterministic/randomized trial chart, and min/max/average/median result table: PASS
+- Phase 10 export/feedback focused suites: PASS (11 invocations; 83 catalog demos)
 
 ## Known Problems
 
@@ -176,4 +183,4 @@ Add jlink/jpackage distribution, platform CI artifacts, and GitHub Release prepa
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 9 analysis-lab checkpoint ready to commit
+- Pending commits: Phase 10 export-and-accessibility checkpoint ready to commit

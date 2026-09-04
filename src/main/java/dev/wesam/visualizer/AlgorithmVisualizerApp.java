@@ -9,11 +9,15 @@ import dev.wesam.visualizer.model.AlgorithmStep;
 import dev.wesam.visualizer.ui.AlgorithmHistory;
 import dev.wesam.visualizer.ui.EditHistory;
 import dev.wesam.visualizer.ui.GridEditor;
+import dev.wesam.visualizer.ui.InputFeedback;
 import dev.wesam.visualizer.ui.InputGenerator;
 import dev.wesam.visualizer.ui.PlaybackController;
 import dev.wesam.visualizer.ui.PseudocodeView;
+import dev.wesam.visualizer.ui.ResultExporter;
 import dev.wesam.visualizer.ui.TreeLabInput;
 import dev.wesam.visualizer.ui.VisualizationCanvas;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -50,6 +54,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -79,7 +84,10 @@ public final class AlgorithmVisualizerApp extends Application {
       generate = new Button("Generate");
   private final ToggleButton favorite = new ToggleButton("☆ Favorite"),
       lightTheme = new ToggleButton("☀ Light");
-  private final Button focusView = new Button("Focus View"), about = new Button("About");
+  private final Button focusView = new Button("Focus View"),
+      exportText = new Button("Export TXT"),
+      exportCsv = new Button("Export CSV"),
+      about = new Button("About");
   private final ToggleButton drawWalls = new ToggleButton("Draw Walls"),
       eraseWalls = new ToggleButton("Erase Walls"),
       setGridStart = new ToggleButton("Set Start"),
@@ -148,7 +156,8 @@ public final class AlgorithmVisualizerApp extends Application {
     titles.getStyleClass().add("brand-title");
     Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
-    HBox box = new HBox(10, mark, titles, spacer, lightTheme, focusView, about);
+    HBox box =
+        new HBox(10, mark, titles, spacer, lightTheme, focusView, exportText, exportCsv, about);
     box.getStyleClass().add("header");
     return box;
   }
@@ -167,6 +176,9 @@ public final class AlgorithmVisualizerApp extends Application {
     categories.setPrefWidth(270);
     categories.setPrefHeight(290);
     categories.getStyleClass().add("category-list");
+    categories.setAccessibleText("Algorithm categories");
+    favorites.setAccessibleText("Favorite algorithms");
+    recentlyViewed.setAccessibleText("Recently viewed algorithms");
     Label searchLabel = eyebrow("FIND AN ALGORITHM");
     Label categoryLabel = eyebrow("CATEGORIES");
     Label favoriteLabel = eyebrow("FAVORITES");
@@ -191,12 +203,14 @@ public final class AlgorithmVisualizerApp extends Application {
 
   private Region workspace() {
     algorithms.setMaxWidth(Double.MAX_VALUE);
+    algorithms.setAccessibleText("Algorithm selection");
     HBox.setHgrow(algorithms, Priority.ALWAYS);
     Label choose = new Label("Algorithm");
     choose.getStyleClass().add("field-label");
     HBox selector = new HBox(12, choose, algorithms, favorite);
     selector.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
     input.setPromptText("Input");
+    input.setAccessibleText("Algorithm input");
     HBox.setHgrow(input, Priority.ALWAYS);
     inputHint.getStyleClass().add("hint");
     VBox inputBox = new VBox(6, new HBox(10, input, generate), inputHint);
@@ -366,6 +380,8 @@ public final class AlgorithmVisualizerApp extends Application {
     lightTheme.setOnAction(event -> updateTheme());
     focusView.setOnAction(event -> updateFocusMode());
     about.setOnAction(event -> showAbout());
+    exportText.setOnAction(event -> exportCurrent("txt"));
+    exportCsv.setOnAction(event -> exportCurrent("csv"));
     input
         .textProperty()
         .addListener(
@@ -531,9 +547,47 @@ public final class AlgorithmVisualizerApp extends Application {
   private void showInputError(Exception exception) {
     Alert alert = new Alert(Alert.AlertType.ERROR);
     alert.setHeaderText("Invalid input");
+    AlgorithmDemo demo = algorithms.getValue();
     alert.setContentText(
-        exception.getMessage() == null ? exception.toString() : exception.getMessage());
+        demo == null
+            ? "Choose an algorithm before entering input."
+            : InputFeedback.message(exception, demo));
     alert.showAndWait();
+  }
+
+  private void exportCurrent(String extension) {
+    AlgorithmDemo demo = algorithms.getValue();
+    AlgorithmStep current = visualization.currentStep();
+    if (demo == null || current == null) {
+      Alert alert = new Alert(Alert.AlertType.INFORMATION);
+      alert.setHeaderText("Nothing to export yet");
+      alert.setContentText("Run or step through an algorithm before exporting its current state.");
+      alert.showAndWait();
+      return;
+    }
+    FileChooser chooser = new FileChooser();
+    chooser.setTitle("Export Algorithm Lab result");
+    chooser.setInitialFileName(ResultExporter.suggestedBaseName(demo) + "." + extension);
+    chooser
+        .getExtensionFilters()
+        .add(
+            new FileChooser.ExtensionFilter(
+                extension.equals("csv") ? "CSV data (*.csv)" : "Text report (*.txt)",
+                "*." + extension));
+    java.io.File destination = chooser.showSaveDialog(root.getScene().getWindow());
+    if (destination == null) return;
+    String finalResult = result.getText().isBlank() ? playback.result() : result.getText();
+    String content =
+        extension.equals("csv")
+            ? ResultExporter.csv(demo, input.getText(), current, finalResult)
+            : ResultExporter.text(demo, input.getText(), current, finalResult);
+    try {
+      Files.writeString(destination.toPath(), content, StandardCharsets.UTF_8);
+      result.setText("Exported " + destination.getName());
+    } catch (java.io.IOException exception) {
+      showInputError(
+          new IllegalArgumentException("Could not save the export: " + exception.getMessage()));
+    }
   }
 
   private void advance() {
