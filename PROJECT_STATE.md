@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 7: real maze generation and grid behavior
+Algorithm Lab V2.0 — Phase 8: algorithm comparison features
 
 ## Completed
 
@@ -63,18 +63,25 @@ Algorithm Lab V2.0 — Phase 7: real maze generation and grid behavior
 - [x] Visualize Dinic levels, admissible edges, augmenting paths, residual capacities, flow, and minimum cut
 - [x] Add an Edmonds–Karp vs Dinic comparison table with phases, augmentations, and step metrics
 - [x] Cross-validate Dinic against Edmonds–Karp on 500 deterministic randomized flow networks
+- [x] Add Random Walls as an accurately named, path-preserving grid baseline
+- [x] Implement visualizable Recursive Backtracking, Recursive Division, Randomized Prim, and Randomized Kruskal mazes
+- [x] Guarantee one start, one target, valid cells, and connected endpoints for generated mazes
+- [x] Add an in-grid maze selector and instant generation for every grid pathfinder
+- [x] Add drag wall drawing and a dedicated erase-walls editing mode
+- [x] Preserve bounded undo/redo across cell edits, clear operations, and maze generation
+- [x] Verify every maze method deterministically plus 160 multi-size/multi-seed connectivity cases
 
 ## Last Completed Task
 
-Phase 6 maximum flow: Dinic, Edmonds–Karp comparison, and randomized cross-validation
+Phase 7 grid and mazes: five generators, visual playback, pathfinder integration, drag editing, and erase mode
 
 ## Current Task
 
-Implement real maze-generation algorithms and finish grid-editing behavior.
+Add sorting comparison mode, sorting race mode, and shortest-path comparison tools.
 
 ## Next Task
 
-Add sorting/shortest-path comparison modes and sorting race.
+Add the experimental complexity laboratory and improved randomized Quick Sort experiments.
 
 ## Tests
 
@@ -122,6 +129,11 @@ Add sorting/shortest-path comparison modes and sorting race.
 - Phase 6 Dinic JaCoCo core branch coverage: 88.18% (1,597 / 1,811 branches)
 - Phase 6 Dinic `./mvnw --batch-mode -DskipTests package`: PASS
 - Phase 6 packaged-app launch: app image created and launched; visual interaction deferred because macOS was locked
+- Phase 7 focused suites: PASS (12 invocations: maze, UI logic, and all catalog defaults)
+- Phase 7 `./mvnw --batch-mode clean test`: PASS (170 JUnit invocations; 78 catalog demos)
+- Phase 7 JaCoCo core line coverage: 98.53% (2,816 / 2,858 lines); required minimum: 80%
+- Phase 7 JaCoCo core branch coverage: 88.66% (1,704 / 1,922 branches)
+- Phase 7 `./mvnw --batch-mode -DskipTests package`: PASS
 
 ## Known Problems
 
@@ -135,4 +147,4 @@ Add sorting/shortest-path comparison modes and sorting race.
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 6 Dinic checkpoint ready to commit
+- Pending commits: Phase 7 grid-and-maze checkpoint ready to commit

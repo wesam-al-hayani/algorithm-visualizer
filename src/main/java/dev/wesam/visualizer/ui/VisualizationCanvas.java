@@ -22,16 +22,19 @@ public final class VisualizationCanvas extends Region {
   private final Canvas canvas = new Canvas();
   private AlgorithmStep step;
   private BiConsumer<Integer, Integer> gridClickHandler;
+  private int lastDragRow = -1, lastDragColumn = -1;
 
   public VisualizationCanvas() {
     getChildren().add(canvas);
     widthProperty().addListener((o, a, b) -> redraw());
     heightProperty().addListener((o, a, b) -> redraw());
     setMinSize(360, 300);
-    canvas.setOnMouseClicked(
+    canvas.setOnMousePressed(event -> handleGridPointer(event.getX(), event.getY()));
+    canvas.setOnMouseDragged(event -> handleGridPointer(event.getX(), event.getY()));
+    canvas.setOnMouseReleased(
         event -> {
-          int[] cell = gridCellAt(event.getX(), event.getY());
-          if (cell != null && gridClickHandler != null) gridClickHandler.accept(cell[0], cell[1]);
+          lastDragRow = -1;
+          lastDragColumn = -1;
         });
   }
 
@@ -46,6 +49,16 @@ public final class VisualizationCanvas extends Region {
 
   public void setOnGridCellClicked(BiConsumer<Integer, Integer> handler) {
     gridClickHandler = handler;
+  }
+
+  private void handleGridPointer(double x, double y) {
+    int[] cell = gridCellAt(x, y);
+    if (cell == null
+        || gridClickHandler == null
+        || cell[0] == lastDragRow && cell[1] == lastDragColumn) return;
+    lastDragRow = cell[0];
+    lastDragColumn = cell[1];
+    gridClickHandler.accept(cell[0], cell[1]);
   }
 
   @Override

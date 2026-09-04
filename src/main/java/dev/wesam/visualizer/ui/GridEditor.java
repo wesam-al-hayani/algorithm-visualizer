@@ -1,5 +1,6 @@
 package dev.wesam.visualizer.ui;
 
+import dev.wesam.visualizer.algorithms.MazeAlgorithms;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -7,6 +8,7 @@ import java.util.Random;
 public final class GridEditor {
   public enum Mode {
     DRAW_WALLS,
+    ERASE_WALLS,
     SET_START,
     SET_TARGET
   }
@@ -23,7 +25,7 @@ public final class GridEditor {
       replace(grid, 'T', '.');
       if (grid[row][column] != 'S') grid[row][column] = 'T';
     } else if (grid[row][column] != 'S' && grid[row][column] != 'T') {
-      grid[row][column] = grid[row][column] == '#' ? '.' : '#';
+      grid[row][column] = mode == Mode.ERASE_WALLS ? '.' : '#';
     }
     return join(grid);
   }
@@ -38,18 +40,7 @@ public final class GridEditor {
   }
 
   public static String randomWalls(String input, Random random) {
-    int[] dimensions = dimensions(input);
-    int rows = Math.max(5, dimensions[0]);
-    int columns = Math.max(6, dimensions[1]);
-    char[][] grid = new char[rows][columns];
-    for (int row = 0; row < rows; row++)
-      for (int column = 0; column < columns; column++)
-        grid[row][column] = random.nextDouble() < .27 ? '#' : '.';
-    for (int row = 0; row < rows; row++) grid[row][0] = '.';
-    for (int column = 0; column < columns; column++) grid[rows - 1][column] = '.';
-    grid[0][0] = 'S';
-    grid[rows - 1][columns - 1] = 'T';
-    return join(grid);
+    return MazeAlgorithms.generate(MazeAlgorithms.Method.RANDOM_WALLS, input, random).grid();
   }
 
   private static int[] dimensions(String input) {

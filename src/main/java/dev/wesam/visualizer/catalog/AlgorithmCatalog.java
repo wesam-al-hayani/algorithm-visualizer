@@ -13,6 +13,7 @@ public final class AlgorithmCatalog {
     demos.addAll(SearchingCatalog.create());
     demos.addAll(StringHashCatalog.create());
     demos.addAll(GraphCatalog.create());
+    demos.addAll(MazeCatalog.create());
     demos.addAll(TreeCatalog.create());
     demos.addAll(HeapCatalog.create());
     demos.addAll(OptimizationCatalog.create());

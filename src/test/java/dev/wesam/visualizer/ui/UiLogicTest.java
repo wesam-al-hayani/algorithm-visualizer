@@ -55,6 +55,8 @@ class UiLogicTest {
     String grid = "S.../..../...T";
     grid = GridEditor.edit(grid, 1, 1, GridEditor.Mode.DRAW_WALLS);
     assertEquals("S.../.#../...T", grid);
+    grid = GridEditor.edit(grid, 1, 1, GridEditor.Mode.ERASE_WALLS);
+    assertEquals("S.../..../...T", grid);
     grid = GridEditor.edit(grid, 1, 2, GridEditor.Mode.SET_START);
     assertEquals(1, count(grid, 'S'));
     grid = GridEditor.edit(grid, 0, 3, GridEditor.Mode.SET_TARGET);
@@ -71,6 +73,7 @@ class UiLogicTest {
     assertEquals(1, count(first, 'S'));
     assertEquals(1, count(first, 'T'));
     assertTrue(first.contains("#"));
+    assertEquals(5, first.split("/").length);
   }
 
   @Test

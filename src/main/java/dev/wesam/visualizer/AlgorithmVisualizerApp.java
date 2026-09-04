@@ -1,5 +1,6 @@
 package dev.wesam.visualizer;
 
+import dev.wesam.visualizer.algorithms.MazeAlgorithms;
 import dev.wesam.visualizer.catalog.AlgorithmCatalog;
 import dev.wesam.visualizer.catalog.AlgorithmDemo;
 import dev.wesam.visualizer.model.AlgorithmRun;
@@ -75,13 +76,18 @@ public final class AlgorithmVisualizerApp extends Application {
       lightTheme = new ToggleButton("☀ Light");
   private final Button focusView = new Button("Focus View"), about = new Button("About");
   private final ToggleButton drawWalls = new ToggleButton("Draw Walls"),
+      eraseWalls = new ToggleButton("Erase Walls"),
       setGridStart = new ToggleButton("Set Start"),
       setGridTarget = new ToggleButton("Set Target");
   private final Button clearPath = new Button("Clear Path"),
       clearGrid = new Button("Clear Grid"),
-      maze = new Button("Generate Maze");
-  private final HBox gridTools =
-      new HBox(8, drawWalls, setGridStart, setGridTarget, clearPath, clearGrid, maze);
+      maze = new Button("Generate Instantly");
+  private final ComboBox<MazeAlgorithms.Method> mazeGenerator = new ComboBox<>();
+  private final VBox gridTools =
+      new VBox(
+          7,
+          new HBox(8, drawWalls, eraseWalls, setGridStart, setGridTarget, clearPath, clearGrid),
+          new HBox(8, new Label("Maze"), mazeGenerator, maze));
   private final TextField treeKey = new TextField();
   private final Button treeInsert = new Button("Insert"),
       treeSearch = new Button("Search"),
@@ -196,6 +202,9 @@ public final class AlgorithmVisualizerApp extends Application {
     speed.setShowTickLabels(true);
     gridTools.setManaged(false);
     gridTools.setVisible(false);
+    mazeGenerator.getItems().setAll(MazeAlgorithms.Method.values());
+    mazeGenerator.getSelectionModel().select(MazeAlgorithms.Method.RECURSIVE_BACKTRACKING);
+    mazeGenerator.setAccessibleText("Maze generation algorithm");
     treeKey.setPromptText("Tree key");
     treeKey.setAccessibleText("Tree Lab key");
     treeKey.setPrefWidth(110);
@@ -382,6 +391,7 @@ public final class AlgorithmVisualizerApp extends Application {
     updateButtons();
     ToggleGroup editMode = new ToggleGroup();
     drawWalls.setToggleGroup(editMode);
+    eraseWalls.setToggleGroup(editMode);
     setGridStart.setToggleGroup(editMode);
     setGridTarget.setToggleGroup(editMode);
     drawWalls.setSelected(true);
@@ -594,7 +604,11 @@ public final class AlgorithmVisualizerApp extends Application {
     GridEditor.Mode mode =
         setGridStart.isSelected()
             ? GridEditor.Mode.SET_START
-            : setGridTarget.isSelected() ? GridEditor.Mode.SET_TARGET : GridEditor.Mode.DRAW_WALLS;
+            : setGridTarget.isSelected()
+                ? GridEditor.Mode.SET_TARGET
+                : eraseWalls.isSelected()
+                    ? GridEditor.Mode.ERASE_WALLS
+                    : GridEditor.Mode.DRAW_WALLS;
     applyEdit(GridEditor.edit(input.getText(), row, column, mode));
     reset();
     previewGrid();
@@ -606,7 +620,9 @@ public final class AlgorithmVisualizerApp extends Application {
   }
 
   private void makeMaze() {
-    applyEdit(GridEditor.randomWalls(input.getText(), new Random()));
+    MazeAlgorithms.Method method = mazeGenerator.getValue();
+    if (method == null) method = MazeAlgorithms.Method.RECURSIVE_BACKTRACKING;
+    applyEdit(MazeAlgorithms.generate(method, input.getText(), new Random()).grid());
     reset();
   }
 

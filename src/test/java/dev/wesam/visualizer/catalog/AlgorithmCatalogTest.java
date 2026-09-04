@@ -10,7 +10,7 @@ class AlgorithmCatalogTest {
   @Test
   void catalogCoversAllCategoriesAndEveryDefaultRunWorks() {
     var catalog = AlgorithmCatalog.create();
-    assertEquals(73, catalog.size(), "every documented demo must remain wired");
+    assertEquals(78, catalog.size(), "every documented demo must remain wired");
     Set<String> categories =
         catalog.stream().map(AlgorithmDemo::category).collect(Collectors.toSet());
     assertEquals(
@@ -19,6 +19,7 @@ class AlgorithmCatalogTest {
             "Searching & Selection",
             "Strings & Hashing",
             "Graph Algorithms",
+            "Maze Generation",
             "Trees",
             "Heaps & Advanced Structures",
             "Dynamic Programming & Optimization",
