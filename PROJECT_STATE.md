@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 8: algorithm comparison features
+Algorithm Lab V2.0 — Phase 9: experimental analysis laboratory
 
 ## Completed
 
@@ -73,18 +73,24 @@ Algorithm Lab V2.0 — Phase 8: algorithm comparison features
 - [x] Add synchronized two-algorithm Sorting Compare Mode on one shared input array
 - [x] Add a 2–6 algorithm Sorting Race with side-by-side animated traces
 - [x] Report comparisons, swaps, writes, and visualization steps without mislabeling animation time as a benchmark
+- [x] Add direct dropdown/checkbox selection for two-sort comparison and 2–6 algorithm races
+- [x] Add Dijkstra vs A* comparison on one shared grid with optimal-cost and exploration metrics
+- [x] Add Dijkstra/Bellman–Ford/Floyd–Warshall/Johnson comparison with explicit scope and weight requirements
+- [x] Upgrade Edmonds–Karp to expose real augmenting-path visualization frames
+- [x] Polish Edmonds–Karp vs Dinic to separate flow operations from actual visualization steps
+- [x] Improve result-table sizing so comparison labels stay within their cells
 
 ## Last Completed Task
 
-Phase 8 sorting comparison and race modes with synchronized operation-count visualization
+Phase 8 comparison features: sorting compare/race, shortest-path comparisons, and polished max-flow comparison
 
 ## Current Task
 
-Add shortest-path comparison tools and finish comparison-mode polish.
+Add the experimental complexity laboratory and improved randomized Quick Sort experiments.
 
 ## Next Task
 
-Add the experimental complexity laboratory and improved randomized Quick Sort experiments.
+Complete portfolio documentation, screenshots, export features, and accessibility review.
 
 ## Tests
 
@@ -138,6 +144,12 @@ Add the experimental complexity laboratory and improved randomized Quick Sort ex
 - Phase 7 JaCoCo core branch coverage: 88.66% (1,704 / 1,922 branches)
 - Phase 7 `./mvnw --batch-mode -DskipTests package`: PASS
 - Phase 8 sorting comparison focused suites: PASS (11 invocations; 80 catalog demos)
+- Phase 8 comparison focused suites: PASS (39 invocations; 82 catalog demos)
+- Phase 8 `./mvnw --batch-mode clean test`: PASS (175 JUnit invocations; 82 catalog demos)
+- Phase 8 JaCoCo core line coverage: 98.54% (2,835 / 2,877 lines); required minimum: 80%
+- Phase 8 JaCoCo core branch coverage: 88.57% (1,713 / 1,934 branches)
+- Phase 8 `./mvnw --batch-mode -DskipTests package`: PASS
+- Phase 8 packaged UI smoke: direct race selectors, five-way synchronized side-by-side playback, active pseudocode, shortest-path result table, and four-algorithm cost agreement: PASS
 
 ## Known Problems
 
@@ -151,4 +163,4 @@ Add the experimental complexity laboratory and improved randomized Quick Sort ex
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 8 sorting-comparison checkpoint ready to commit
+- Pending commits: Phase 8 comparison-features checkpoint ready to commit

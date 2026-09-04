@@ -223,6 +223,38 @@ final class GraphCatalog {
             "0>1:2,0>2:5,1>2:1,1>3:4,2>3:1,3>4:2,2>4:6 ; 4",
             GraphCatalog::graphAStar));
     demos.add(
+        demo(
+            "Graph Algorithms",
+            "Grid Dijkstra vs A*",
+            "Runs Dijkstra and A* on the same non-negative unit-weight grid. Both must return the"
+                + " same optimal cost; A* uses Manhattan distance to guide expansion.",
+            "parse one shared non-negative grid\n"
+                + "run Dijkstra without a heuristic\n"
+                + "run A* with admissible Manhattan distance\n"
+                + "compare path cost, visited cells, and visualization steps\n"
+                + "require both optimal path costs to agree",
+            "O(RC log(RC))",
+            "O(RC)",
+            "Rows of ., #, S, T separated by /",
+            "S...../.##.../...#../.#..../.....T",
+            GraphCatalog::gridComparison));
+    demos.add(
+        demo(
+            "Graph Algorithms",
+            "Shortest-Path Algorithm Comparison",
+            "Compares single-source and all-pairs algorithms on one directed graph while stating"
+                + " each algorithm's edge-weight requirements and result scope.",
+            "parse one shared directed weighted graph\n"
+                + "run Dijkstra and Bellman–Ford from the selected source\n"
+                + "run Floyd–Warshall and Johnson for all pairs\n"
+                + "read the same selected source-target cost from every result\n"
+                + "compare requirements, scope, and agreement",
+            "O((V+E)logV) to O(V³)",
+            "O(V) to O(V²)",
+            "Non-negative directed weighted edges; then ; source,target",
+            "0>1:4,0>2:1,2>1:2,1>3:1,2>3:5,3>4:3 ; 0,4",
+            GraphCatalog::shortestPathComparison));
+    demos.add(
         graphDemo(
             "Kruskal Minimum Spanning Tree",
             "Takes edges by weight while Union-Find rejects cycles.",
@@ -894,6 +926,135 @@ final class GraphCatalog {
     return new AlgorithmRun(steps, summary);
   }
 
+  static AlgorithmRun gridComparison(String input) {
+    AlgorithmRun dijkstra = grid(input, GridPathfinding.Method.DIJKSTRA);
+    AlgorithmRun aStar = grid(input, GridPathfinding.Method.A_STAR);
+    long dijkstraCost = finalStatistic(dijkstra, "Path length");
+    long aStarCost = finalStatistic(aStar, "Path length");
+    boolean agree =
+        dijkstra.result().equals("No path")
+            ? aStar.result().equals("No path")
+            : dijkstraCost == aStarCost;
+    List<String> table =
+        new ArrayList<>(
+            List.of("Algorithm", "Requirement", "Path Cost", "Visited Cells", "Visual Steps"));
+    addPathfinderRow(table, "Dijkstra", "non-negative weights", dijkstraCost, dijkstra);
+    addPathfinderRow(table, "A*", "non-negative + admissible h", aStarCost, aStar);
+    AlgorithmStep step =
+        new AlgorithmStep(
+            agree ? "Both pathfinders agree on the optimal cost" : "Path-cost mismatch detected",
+            "parse shared grid\nrun Dijkstra\nrun A*\ncompare work\nverify cost",
+            4,
+            TABLE,
+            List.of(),
+            table,
+            rangeSet(5, table.size() - 1),
+            Set.of(),
+            Set.of(),
+            List.of(),
+            Map.of(
+                "Algorithms agree", agree ? 1 : 0,
+                "Dijkstra visited", finalStatistic(dijkstra, "Visited"),
+                "A* visited", finalStatistic(aStar, "Visited")),
+            "columns=5\nBoth algorithms used the exact same unit-weight grid. A* uses Manhattan"
+                + " h; Dijkstra uses h=0.");
+    return new AlgorithmRun(
+        List.of(step), "Dijkstra=" + dijkstra.result() + "; A*=" + aStar.result());
+  }
+
+  static AlgorithmRun shortestPathComparison(String input) {
+    GraphQuery query = graphQuery(input, true, true);
+    GraphAlgorithms.ShortestPaths dijkstra = GraphAlgorithms.dijkstra(query.graph, query.source);
+    GraphAlgorithms.ShortestPaths bellman = GraphAlgorithms.bellmanFord(query.graph, query.source);
+    GraphAlgorithms.AllPairsShortestPaths floyd = GraphAlgorithms.floydWarshall(query.graph);
+    GraphAlgorithms.AllPairsShortestPaths johnson = GraphAlgorithms.johnson(query.graph);
+    long[] costs = {
+      dijkstra.distance()[query.target],
+      bellman.distance()[query.target],
+      floyd.distance()[query.source][query.target],
+      johnson.distance()[query.source][query.target]
+    };
+    boolean agree = Arrays.stream(costs).allMatch(cost -> cost == costs[0]);
+    List<String> table =
+        new ArrayList<>(
+            List.of("Algorithm", "Scope", "Edge Requirement", "Selected Cost", "Work Profile"));
+    addShortestPathRow(
+        table, "Dijkstra", "single source", "no negative weights", costs[0], "sparse: E log V");
+    addShortestPathRow(
+        table, "Bellman–Ford", "single source", "negative allowed; no neg cycle", costs[1], "VE");
+    addShortestPathRow(
+        table,
+        "Floyd–Warshall",
+        "all pairs",
+        "negative allowed; no neg cycle",
+        costs[2],
+        "V³ dense");
+    addShortestPathRow(
+        table,
+        "Johnson",
+        "all pairs",
+        "negative allowed; no neg cycle",
+        costs[3],
+        "sparse: VE log V");
+    AlgorithmStep step =
+        new AlgorithmStep(
+            agree
+                ? "All four algorithms agree on the selected route cost"
+                : "Shortest-path mismatch detected",
+            "parse shared graph\n"
+                + "run single-source algorithms\n"
+                + "run all-pairs algorithms\n"
+                + "read selected route\n"
+                + "compare requirements",
+            4,
+            TABLE,
+            List.of(),
+            table,
+            rangeSet(5, table.size() - 1),
+            Set.of(),
+            Set.of(),
+            List.of(),
+            Map.of(
+                "Algorithms agree", agree ? 1 : 0,
+                "Vertices", query.graph.vertices(),
+                "Edges", query.graph.edges().size()),
+            "columns=5\nSelected route "
+                + query.source
+                + " → "
+                + query.target
+                + ". Dijkstra is intentionally rejected for negative-edge comparison inputs.");
+    return new AlgorithmRun(
+        List.of(step),
+        "Selected cost " + distanceValue(costs[0]) + "; all four algorithms agree=" + agree);
+  }
+
+  private static long finalStatistic(AlgorithmRun run, String name) {
+    if (run.steps().isEmpty()) return 0;
+    return run.steps().get(run.steps().size() - 1).statistics().getOrDefault(name, 0).longValue();
+  }
+
+  private static void addPathfinderRow(
+      List<String> table, String name, String requirement, long cost, AlgorithmRun run) {
+    table.add(name);
+    table.add(requirement);
+    table.add(run.result().equals("No path") ? "unreachable" : Long.toString(cost));
+    table.add(Long.toString(finalStatistic(run, "Visited")));
+    table.add(Integer.toString(run.steps().size()));
+  }
+
+  private static void addShortestPathRow(
+      List<String> table, String name, String scope, String requirement, long cost, String work) {
+    table.add(name);
+    table.add(scope);
+    table.add(requirement);
+    table.add(distanceValue(cost));
+    table.add(work);
+  }
+
+  private static String distanceValue(long distance) {
+    return distance >= GraphAlgorithms.INF ? "∞" : Long.toString(distance);
+  }
+
   private static AlgorithmStep distanceMatrixStep(
       String message,
       long[][] distance,
@@ -962,28 +1123,32 @@ final class GraphCatalog {
     int[][] capacity = network.capacity;
     var r = GraphAlgorithms.edmondsKarp(capacity, network.source, network.sink);
     GraphAlgorithms.Graph g = capacityGraph(capacity);
-    Set<Integer> source = new LinkedHashSet<>();
-    for (int i = 0; i < r.sourceSideOfMinCut().length; i++)
-      if (r.sourceSideOfMinCut()[i]) source.add(i);
-    AlgorithmStep finalStep =
-        graphStep(
-            "Maximum flow complete; partitions show the minimum cut",
-            g,
-            Set.of(network.source, network.sink),
-            source,
-            rangeSet(0, capacity.length - 1),
-            Map.of(
-                "Maximum flow",
-                r.maximumFlow(),
-                "BFS phases",
-                r.bfsPhases(),
-                "Augmentations",
-                r.augmentations(),
-                "Steps",
-                r.steps()),
-            "Residual network: " + Arrays.deepToString(r.residual()));
-    return new AlgorithmRun(
-        List.of(finalStep), "Maximum flow = minimum cut capacity = " + r.maximumFlow());
+    List<AlgorithmStep> steps = new ArrayList<>();
+    for (int index = 0; index < r.frames().size(); index++) {
+      GraphAlgorithms.FlowFrame frame = r.frames().get(index);
+      Set<Integer> sourceSide = new LinkedHashSet<>();
+      if (index == r.frames().size() - 1)
+        for (int vertex = 0; vertex < r.sourceSideOfMinCut().length; vertex++)
+          if (r.sourceSideOfMinCut()[vertex]) sourceSide.add(vertex);
+      steps.add(
+          graphStep(
+              frame.event(),
+              g,
+              Set.copyOf(frame.augmentingPath()),
+              sourceSide,
+              index == r.frames().size() - 1 ? rangeSet(0, capacity.length - 1) : Set.of(),
+              Map.of(
+                  "Maximum flow", r.maximumFlow(),
+                  "Current flow", frame.totalFlow(),
+                  "BFS phases", r.bfsPhases(),
+                  "Augmentations", r.augmentations(),
+                  "Bottleneck", frame.bottleneck()),
+              "Path: "
+                  + frame.augmentingPath()
+                  + "\nResidual network: "
+                  + Arrays.deepToString(frame.residual())));
+    }
+    return new AlgorithmRun(steps, "Maximum flow = minimum cut capacity = " + r.maximumFlow());
   }
 
   static AlgorithmRun dinic(String input) {
@@ -1069,18 +1234,18 @@ final class GraphCatalog {
             "Algorithm",
             "Maximum Flow",
             "BFS Phases",
-            "Augmentations",
-            "Steps",
+            "Flow Operations",
+            "Visual Steps",
             "Edmonds–Karp",
             Integer.toString(edmonds.maximumFlow()),
             Integer.toString(edmonds.bfsPhases()),
             Integer.toString(edmonds.augmentations()),
-            Integer.toString(edmonds.steps()),
+            Integer.toString(edmonds.frames().size()),
             "Dinic",
             Integer.toString(dinic.maximumFlow()),
             Integer.toString(dinic.bfsPhases()),
             Integer.toString(dinic.augmentations()),
-            Integer.toString(dinic.steps()));
+            Integer.toString(dinic.frames().size()));
     AlgorithmStep step =
         new AlgorithmStep(
             agree ? "Both algorithms agree" : "Maximum-flow mismatch detected",
@@ -1094,7 +1259,8 @@ final class GraphCatalog {
             Set.of(),
             List.of(),
             Map.of("Maximum flow", dinic.maximumFlow(), "Algorithms agree", agree ? 1 : 0),
-            "columns=5\nEdmonds–Karp and Dinic ran on the same capacity matrix");
+            "columns=5\nEdmonds–Karp and Dinic ran on the same capacity matrix. Flow operations"
+                + " are augmentations; visual steps are actual recorded frames.");
     return new AlgorithmRun(
         List.of(step),
         "Edmonds–Karp="

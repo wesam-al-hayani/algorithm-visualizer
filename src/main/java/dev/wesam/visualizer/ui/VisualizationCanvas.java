@@ -311,7 +311,7 @@ public final class VisualizationCanvas extends Region {
     if (columns <= 0)
       columns = Math.max(1, (int) Math.ceil(Math.sqrt(Math.max(1, step.labels().size()))));
     int rows = (int) Math.ceil(step.labels().size() / (double) columns);
-    double cellW = Math.min(72, (w - 32) / columns),
+    double cellW = Math.min(116, (w - 32) / columns),
         cellH = Math.min(52, (h - 32) / Math.max(1, rows)),
         left = (w - cellW * columns) / 2,
         top = (h - cellH * rows) / 2;
@@ -322,7 +322,11 @@ public final class VisualizationCanvas extends Region {
       g.setFill(color(i));
       g.fillRoundRect(left + c * cellW + 2, top + r * cellH + 2, cellW - 4, cellH - 4, 8, 8);
       g.setFill(TEXT);
-      g.fillText(step.labels().get(i), left + (c + .5) * cellW, top + (r + .58) * cellH);
+      g.fillText(
+          step.labels().get(i),
+          left + (c + .5) * cellW,
+          top + (r + .58) * cellH,
+          Math.max(8, cellW - 8));
     }
   }
 

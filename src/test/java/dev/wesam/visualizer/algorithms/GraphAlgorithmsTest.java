@@ -241,6 +241,8 @@ class GraphAlgorithmsTest {
     assertFalse(result.sourceSideOfMinCut()[5]);
     assertTrue(result.bfsPhases() > 0);
     assertEquals(result.bfsPhases(), result.augmentations());
+    assertEquals(result.augmentations() + 1, result.frames().size());
+    assertTrue(result.frames().stream().anyMatch(frame -> !frame.augmentingPath().isEmpty()));
 
     DinicResult dinic = dinic(capacity, 0, 5);
     assertEquals(23, dinic.maximumFlow());

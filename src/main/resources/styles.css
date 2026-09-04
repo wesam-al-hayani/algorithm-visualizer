@@ -13,6 +13,8 @@
 .control-card, .visual-card, .info-panel { -fx-background-color: #131d30; -fx-background-radius: 14; -fx-border-color: #26344c; -fx-border-radius: 14; }
 .control-card { -fx-padding: 15; }
 .tree-tools { -fx-alignment: center-left; }
+.comparison-tools { -fx-padding: 8; -fx-background-color: #17243a; -fx-background-radius: 9; }
+.comparison-tools .check-box { -fx-text-fill: #dbe5f4; }
 .visual-card { -fx-padding: 14; }
 .label { -fx-text-fill: #dbe5f4; }
 .field-label { -fx-font-weight: 700; }
@@ -75,4 +77,6 @@
 .light-theme .separator .line { -fx-border-color: #d4dde8; }
 .light-theme .split-pane-divider { -fx-background-color: #eef3f8; }
 .light-theme .button, .light-theme .toggle-button { -fx-background-color: #dce7f4; -fx-text-fill: #172235; }
+.light-theme .comparison-tools { -fx-background-color: #edf3f9; }
+.light-theme .comparison-tools .check-box { -fx-text-fill: #172235; }
 .light-theme .button:hover { -fx-background-color: #cad9e9; }

@@ -1,6 +1,7 @@
 package dev.wesam.visualizer;
 
 import dev.wesam.visualizer.algorithms.MazeAlgorithms;
+import dev.wesam.visualizer.algorithms.SortAlgorithms;
 import dev.wesam.visualizer.catalog.AlgorithmCatalog;
 import dev.wesam.visualizer.catalog.AlgorithmDemo;
 import dev.wesam.visualizer.model.AlgorithmRun;
@@ -13,9 +14,12 @@ import dev.wesam.visualizer.ui.PlaybackController;
 import dev.wesam.visualizer.ui.PseudocodeView;
 import dev.wesam.visualizer.ui.TreeLabInput;
 import dev.wesam.visualizer.ui.VisualizationCanvas;
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
+import java.util.Set;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -25,6 +29,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -88,6 +93,14 @@ public final class AlgorithmVisualizerApp extends Application {
           7,
           new HBox(8, drawWalls, eraseWalls, setGridStart, setGridTarget, clearPath, clearGrid),
           new HBox(8, new Label("Maze"), mazeGenerator, maze));
+  private final ComboBox<SortAlgorithms.Kind> compareFirst = new ComboBox<>(),
+      compareSecond = new ComboBox<>();
+  private final HBox compareTools =
+      new HBox(8, new Label("Compare"), compareFirst, new Label("vs"), compareSecond);
+  private final FlowPane raceTools = new FlowPane(8, 6);
+  private final VBox sortingTools = new VBox(7, compareTools, raceTools);
+  private final EnumMap<SortAlgorithms.Kind, CheckBox> raceChoices =
+      new EnumMap<>(SortAlgorithms.Kind.class);
   private final TextField treeKey = new TextField();
   private final Button treeInsert = new Button("Insert"),
       treeSearch = new Button("Search"),
@@ -105,6 +118,7 @@ public final class AlgorithmVisualizerApp extends Application {
   private ScrollPane informationScroll;
   private Timeline timeline;
   private boolean updatingFavorite;
+  private boolean updatingSortingTools;
 
   @Override
   public void start(Stage stage) {
@@ -205,13 +219,16 @@ public final class AlgorithmVisualizerApp extends Application {
     mazeGenerator.getItems().setAll(MazeAlgorithms.Method.values());
     mazeGenerator.getSelectionModel().select(MazeAlgorithms.Method.RECURSIVE_BACKTRACKING);
     mazeGenerator.setAccessibleText("Maze generation algorithm");
+    initializeSortingTools();
+    sortingTools.setManaged(false);
+    sortingTools.setVisible(false);
     treeKey.setPromptText("Tree key");
     treeKey.setAccessibleText("Tree Lab key");
     treeKey.setPrefWidth(110);
     treeTools.setManaged(false);
     treeTools.setVisible(false);
     treeTools.getStyleClass().add("tree-tools");
-    VBox top = new VBox(12, selector, inputBox, gridTools, treeTools, controls);
+    VBox top = new VBox(12, selector, inputBox, gridTools, sortingTools, treeTools, controls);
     top.getStyleClass().add("control-card");
     VBox visualCard = new VBox(10, operation, visualization, new HBox(12, progress, result));
     visualCard.getStyleClass().add("visual-card");
@@ -304,8 +321,14 @@ public final class AlgorithmVisualizerApp extends Application {
               updateButtons();
               boolean isGrid = demo != null && demo.name().startsWith("Grid ");
               boolean isTreeLab = demo != null && TreeLabInput.supports(demo.name());
+              boolean isSortingTool =
+                  demo != null
+                      && (demo.name().equals("Sorting Compare Mode")
+                          || demo.name().equals("Sorting Race"));
               gridTools.setManaged(isGrid);
               gridTools.setVisible(isGrid);
+              sortingTools.setManaged(isSortingTool);
+              sortingTools.setVisible(isSortingTool);
               treeTools.setManaged(isTreeLab);
               treeTools.setVisible(isTreeLab);
               if (demo != null) {
@@ -316,6 +339,7 @@ public final class AlgorithmVisualizerApp extends Application {
                 updatingFavorite = false;
                 refreshHistoryLists();
                 input.setText(demo.defaultInput());
+                if (isSortingTool) configureSortingTools(demo.name());
                 inputHint.setText(demo.inputHint());
                 explanation.setText(
                     demo.explanation()
@@ -411,6 +435,11 @@ public final class AlgorithmVisualizerApp extends Application {
           makeMaze();
           previewGrid();
         });
+    compareFirst.setOnAction(event -> updateCompareSelection());
+    compareSecond.setOnAction(event -> updateCompareSelection());
+    raceChoices
+        .values()
+        .forEach(choice -> choice.setOnAction(event -> updateRaceSelection(choice)));
     treeInsert.setOnAction(e -> performTreeOperation(TreeLabInput.Operation.INSERT));
     treeSearch.setOnAction(e -> performTreeOperation(TreeLabInput.Operation.SEARCH));
     treeDelete.setOnAction(e -> performTreeOperation(TreeLabInput.Operation.DELETE));
@@ -624,6 +653,92 @@ public final class AlgorithmVisualizerApp extends Application {
     if (method == null) method = MazeAlgorithms.Method.RECURSIVE_BACKTRACKING;
     applyEdit(MazeAlgorithms.generate(method, input.getText(), new Random()).grid());
     reset();
+  }
+
+  private void initializeSortingTools() {
+    compareFirst.getItems().setAll(SortAlgorithms.Kind.values());
+    compareSecond.getItems().setAll(SortAlgorithms.Kind.values());
+    compareFirst.setAccessibleText("First sorting algorithm");
+    compareSecond.setAccessibleText("Second sorting algorithm");
+    for (SortAlgorithms.Kind kind : SortAlgorithms.Kind.values()) {
+      CheckBox choice = new CheckBox(sortName(kind));
+      raceChoices.put(kind, choice);
+      raceTools.getChildren().add(choice);
+    }
+    sortingTools.getStyleClass().add("comparison-tools");
+  }
+
+  private void configureSortingTools(String demoName) {
+    updatingSortingTools = true;
+    boolean compare = demoName.equals("Sorting Compare Mode");
+    compareTools.setManaged(compare);
+    compareTools.setVisible(compare);
+    raceTools.setManaged(!compare);
+    raceTools.setVisible(!compare);
+    if (compare) {
+      compareFirst.setValue(SortAlgorithms.Kind.MERGE);
+      compareSecond.setValue(SortAlgorithms.Kind.QUICK);
+    } else {
+      Set<SortAlgorithms.Kind> defaults =
+          Set.of(
+              SortAlgorithms.Kind.BUBBLE,
+              SortAlgorithms.Kind.INSERTION,
+              SortAlgorithms.Kind.MERGE,
+              SortAlgorithms.Kind.QUICK,
+              SortAlgorithms.Kind.HEAP);
+      raceChoices.forEach((kind, choice) -> choice.setSelected(defaults.contains(kind)));
+    }
+    updatingSortingTools = false;
+  }
+
+  private void updateCompareSelection() {
+    if (updatingSortingTools || compareFirst.getValue() == null || compareSecond.getValue() == null)
+      return;
+    if (compareFirst.getValue() == compareSecond.getValue()) {
+      operation.setText("Choose two distinct sorting algorithms");
+      return;
+    }
+    replaceSortingSelection(compareFirst.getValue().name() + "," + compareSecond.getValue().name());
+  }
+
+  private void updateRaceSelection(CheckBox changed) {
+    if (updatingSortingTools) return;
+    List<SortAlgorithms.Kind> selected =
+        raceChoices.entrySet().stream()
+            .filter(entry -> entry.getValue().isSelected())
+            .map(java.util.Map.Entry::getKey)
+            .toList();
+    if (selected.size() > 6) {
+      updatingSortingTools = true;
+      changed.setSelected(false);
+      updatingSortingTools = false;
+      operation.setText("Sorting Race supports at most six algorithms");
+      return;
+    }
+    if (selected.size() < 2) {
+      operation.setText("Choose at least two algorithms for Sorting Race");
+      return;
+    }
+    replaceSortingSelection(
+        selected.stream().map(Enum::name).collect(java.util.stream.Collectors.joining(",")));
+  }
+
+  private void replaceSortingSelection(String selection) {
+    String current = input.getText();
+    String array =
+        current.contains(";") ? current.substring(current.indexOf(';') + 1).trim() : current;
+    input.setText(selection + " ; " + array);
+    reset();
+  }
+
+  private static String sortName(SortAlgorithms.Kind kind) {
+    String[] words = kind.name().toLowerCase(Locale.ROOT).split("_");
+    StringBuilder name = new StringBuilder();
+    for (String word : words) {
+      if (!name.isEmpty()) name.append(' ');
+      name.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+    }
+    return name.toString();
   }
 
   private Label eyebrow(String text) {

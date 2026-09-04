@@ -276,6 +276,14 @@ public final class GraphAlgorithms {
     }
   }
 
+  public record FlowFrame(
+      List<Integer> augmentingPath, int bottleneck, int totalFlow, int[][] residual, String event) {
+    public FlowFrame {
+      augmentingPath = List.copyOf(augmentingPath);
+      residual = copy(residual);
+    }
+  }
+
   public static List<Integer> bfs(Graph graph, int start) {
     checkVertex(graph, start);
     List<List<Edge>> adj = graph.adjacency();
@@ -1112,6 +1120,7 @@ public final class GraphAlgorithms {
     int maxFlow = 0;
     int bfsPhases = 0, augmentations = 0, steps = 0;
     int[] parent = new int[n];
+    List<FlowFrame> frames = new ArrayList<>();
     while (true) {
       steps++;
       if (!flowBfs(residual, source, sink, parent)) break;
@@ -1120,6 +1129,12 @@ public final class GraphAlgorithms {
       int bottleneck = Integer.MAX_VALUE;
       for (int v = sink; v != source; v = parent[v])
         bottleneck = Math.min(bottleneck, residual[parent[v]][v]);
+      List<Integer> path = new ArrayList<>();
+      for (int vertex = sink; vertex != -1; vertex = parent[vertex]) {
+        path.add(vertex);
+        if (vertex == source) break;
+      }
+      Collections.reverse(path);
       for (int v = sink; v != source; v = parent[v]) {
         int u = parent[v];
         residual[u][v] -= bottleneck;
@@ -1127,9 +1142,15 @@ public final class GraphAlgorithms {
         steps++;
       }
       maxFlow = Math.addExact(maxFlow, bottleneck);
+      frames.add(
+          new FlowFrame(
+              path, bottleneck, maxFlow, residual, "Augment along the shortest residual path"));
     }
     boolean[] sourceSide = residualReachable(residual, source);
-    return new FlowResult(maxFlow, residual, sourceSide, bfsPhases, augmentations, steps);
+    frames.add(
+        new FlowFrame(
+            List.of(), 0, maxFlow, residual, "No augmenting path remains; extract minimum cut"));
+    return new FlowResult(maxFlow, residual, sourceSide, bfsPhases, augmentations, steps, frames);
   }
 
   /** Dinic's algorithm: repeated BFS level graphs followed by DFS blocking flows. */
@@ -1295,12 +1316,14 @@ public final class GraphAlgorithms {
       boolean[] sourceSideOfMinCut,
       int bfsPhases,
       int augmentations,
-      int steps) {
+      int steps,
+      List<FlowFrame> frames) {
     public FlowResult {
       int[][] copy = new int[residual.length][];
       for (int i = 0; i < residual.length; i++) copy[i] = residual[i].clone();
       residual = copy;
       sourceSideOfMinCut = sourceSideOfMinCut.clone();
+      frames = List.copyOf(frames);
     }
   }
 
