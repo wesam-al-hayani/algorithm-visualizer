@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Algorithm Lab V2.0 — Phase 10: portfolio quality, exports, and accessibility
+Algorithm Lab V2.0 — Phase 11: native distribution and release preparation
 
 ## Completed
 
@@ -92,18 +92,23 @@ Algorithm Lab V2.0 — Phase 10: portfolio quality, exports, and accessibility
 - [x] Prevent normal UI validation alerts from exposing exception class names or stack traces
 - [x] Add accessible labels for navigation, inputs, comparison selectors, and the visualization canvas
 - [x] Keep visible keyboard focus styling and non-color operation/pseudocode/statistic cues
+- [x] Capture five real packaged-application screenshots covering sorting, graphs, trees, grids, and comparison mode
+- [x] Redesign the README around the complete 83-demo V2.0 application and verified screenshots
+- [x] Document every visible demonstration in a 10-category implementation/visualization/test matrix
+- [x] Add a progressive learning guide with core ideas, data structures, complexity, and related topics
+- [x] Add focused architecture and testing guides with extension points and release verification
 
 ## Last Completed Task
 
-Phase 10 export, validation-feedback, and accessibility code improvements
+Phase 10 portfolio screenshots and complete V2.0 documentation
 
 ## Current Task
 
-Generate real application screenshots and complete the README, learning, architecture, testing, and coverage documentation.
+Add jlink/jpackage distribution, platform CI artifacts, and GitHub Release preparation.
 
 ## Next Task
 
-Add jlink/jpackage distribution, platform CI artifacts, and GitHub Release preparation.
+Run the final test, coverage, packaging, validation, accessibility, and packaged-application quality audit.
 
 ## Tests
 
@@ -170,11 +175,16 @@ Add jlink/jpackage distribution, platform CI artifacts, and GitHub Release prepa
 - Phase 9 `./mvnw --batch-mode -DskipTests package`: PASS
 - Phase 9 packaged UI smoke: measured/theoretical complexity chart, deterministic/randomized trial chart, and min/max/average/median result table: PASS
 - Phase 10 export/feedback focused suites: PASS (11 invocations; 83 catalog demos)
+- Phase 10 documentation `./mvnw --batch-mode clean test`: PASS (182 JUnit invocations; 83 catalog demos)
+- Phase 10 JaCoCo core line coverage: 98.45% (2,924 / 2,970 lines); required minimum: 80%
+- Phase 10 JaCoCo core branch coverage: 88.34% (1,750 / 1,981 branches)
+- Phase 10 `./mvnw --batch-mode -DskipTests package`: PASS
+- Phase 10 documentation validation: five actual 1154×768 PNG captures, 83 coverage rows, and all local links: PASS
 
 ## Known Problems
 
 - Maven is not installed globally; the tested `./mvnw` launcher handles it.
-- V2 implementation is in progress; `main` must not be merged until all mandatory V2 work is verified.
+- Native distribution and the final release audit remain; `main` must not be merged until both are verified.
 
 ## GitHub
 
@@ -183,4 +193,4 @@ Add jlink/jpackage distribution, platform CI artifacts, and GitHub Release prepa
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 10 export-and-accessibility checkpoint ready to commit
+- Pending commits: Phase 10 portfolio/documentation checkpoint ready to commit
