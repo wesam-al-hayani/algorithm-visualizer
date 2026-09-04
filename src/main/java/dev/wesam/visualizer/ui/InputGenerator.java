@@ -11,6 +11,13 @@ public final class InputGenerator {
 
   public static String generate(AlgorithmDemo demo, String currentInput, Random random) {
     String name = demo.name();
+    if (name.equals("Sorting Compare Mode") || name.equals("Sorting Race")) {
+      String prefix =
+          currentInput != null && currentInput.contains(";")
+              ? currentInput.substring(0, currentInput.indexOf(';')).trim()
+              : demo.defaultInput().substring(0, demo.defaultInput().indexOf(';')).trim();
+      return prefix + " ; " + randomCsv(random, 10);
+    }
     if (demo.category().equals("Sorting")
         || demo.category().equals("Trees")
         || demo.category().equals("Heaps & Advanced Structures")) {

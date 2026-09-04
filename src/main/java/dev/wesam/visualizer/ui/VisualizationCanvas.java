@@ -101,6 +101,10 @@ public final class VisualizationCanvas extends Region {
   }
 
   private void drawArray(GraphicsContext g, double w, double h) {
+    if (step.details().startsWith("comparison-arrays")) {
+      drawComparisonArrays(g, w, h);
+      return;
+    }
     List<Integer> a = step.values();
     if (a.isEmpty()) {
       drawCentered(g, w, h, "Empty input");
@@ -122,6 +126,62 @@ public final class VisualizationCanvas extends Region {
       g.setTextAlign(TextAlignment.CENTER);
       g.fillText(Integer.toString(a.get(i)), x + bar / 2, bottom + 18);
     }
+  }
+
+  private void drawComparisonArrays(GraphicsContext g, double w, double h) {
+    int series = detailInteger("series", 2), length = detailInteger("length", 0);
+    String[] names = detailValue("names").split("\\|", -1);
+    if (length <= 0 || series <= 0 || step.values().size() < series * length) {
+      drawCentered(g, w, h, "Invalid comparison frame");
+      return;
+    }
+    int panelColumns = series == 2 ? 2 : Math.min(3, series);
+    int panelRows = (int) Math.ceil(series / (double) panelColumns);
+    double gap = 14, panelWidth = (w - gap * (panelColumns + 1)) / panelColumns;
+    double panelHeight = (h - gap * (panelRows + 1)) / panelRows;
+    for (int item = 0; item < series; item++) {
+      int panelRow = item / panelColumns, panelColumn = item % panelColumns;
+      double left = gap + panelColumn * (panelWidth + gap);
+      double top = gap + panelRow * (panelHeight + gap);
+      g.setFill(PANEL);
+      g.fillRoundRect(left, top, panelWidth, panelHeight, 14, 14);
+      g.setFill(TEXT);
+      g.setTextAlign(TextAlignment.LEFT);
+      g.setFont(Font.font("System", FontWeight.SEMI_BOLD, 13));
+      g.fillText(
+          item < names.length ? names[item] : "Algorithm " + (item + 1), left + 12, top + 20);
+      int offset = item * length;
+      int max = 1;
+      for (int index = 0; index < length; index++)
+        max = Math.max(max, Math.abs(step.values().get(offset + index)));
+      double innerWidth = panelWidth - 24, barGap = 3;
+      double barWidth = Math.max(2, (innerWidth - barGap * (length - 1)) / length);
+      double baseline = top + panelHeight - 20;
+      double availableHeight = Math.max(12, panelHeight - 54);
+      for (int index = 0; index < length; index++) {
+        int global = offset + index;
+        double barHeight =
+            Math.max(3, Math.abs(step.values().get(global)) / (double) max * availableHeight);
+        double x = left + 12 + index * (barWidth + barGap);
+        g.setFill(color(global));
+        g.fillRoundRect(x, baseline - barHeight, barWidth, barHeight, 5, 5);
+      }
+    }
+  }
+
+  private int detailInteger(String key, int fallback) {
+    try {
+      return Integer.parseInt(detailValue(key));
+    } catch (NumberFormatException exception) {
+      return fallback;
+    }
+  }
+
+  private String detailValue(String key) {
+    String prefix = key + "=";
+    for (String line : step.details().split("\\R"))
+      if (line.startsWith(prefix)) return line.substring(prefix.length());
+    return "";
   }
 
   private void drawGraph(GraphicsContext g, double w, double h) {

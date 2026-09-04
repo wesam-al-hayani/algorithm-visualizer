@@ -70,14 +70,17 @@ Algorithm Lab V2.0 — Phase 8: algorithm comparison features
 - [x] Add drag wall drawing and a dedicated erase-walls editing mode
 - [x] Preserve bounded undo/redo across cell edits, clear operations, and maze generation
 - [x] Verify every maze method deterministically plus 160 multi-size/multi-seed connectivity cases
+- [x] Add synchronized two-algorithm Sorting Compare Mode on one shared input array
+- [x] Add a 2–6 algorithm Sorting Race with side-by-side animated traces
+- [x] Report comparisons, swaps, writes, and visualization steps without mislabeling animation time as a benchmark
 
 ## Last Completed Task
 
-Phase 7 grid and mazes: five generators, visual playback, pathfinder integration, drag editing, and erase mode
+Phase 8 sorting comparison and race modes with synchronized operation-count visualization
 
 ## Current Task
 
-Add sorting comparison mode, sorting race mode, and shortest-path comparison tools.
+Add shortest-path comparison tools and finish comparison-mode polish.
 
 ## Next Task
 
@@ -134,6 +137,7 @@ Add the experimental complexity laboratory and improved randomized Quick Sort ex
 - Phase 7 JaCoCo core line coverage: 98.53% (2,816 / 2,858 lines); required minimum: 80%
 - Phase 7 JaCoCo core branch coverage: 88.66% (1,704 / 1,922 branches)
 - Phase 7 `./mvnw --batch-mode -DskipTests package`: PASS
+- Phase 8 sorting comparison focused suites: PASS (11 invocations; 80 catalog demos)
 
 ## Known Problems
 
@@ -147,4 +151,4 @@ Add the experimental complexity laboratory and improved randomized Quick Sort ex
 - Last push successful: yes
 - Stable V1 main commit: `3685d94cf251eeef236e04a209203dc4ac5f4005`
 - V2 work branch: `codex-work`
-- Pending commits: Phase 7 grid-and-maze checkpoint ready to commit
+- Pending commits: Phase 8 sorting-comparison checkpoint ready to commit
